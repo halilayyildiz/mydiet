@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Profile · MyDiet{% endblock %}
+
+{% block content %}
+  <section class="toolbar">
+    <div>
+      <p class="eyebrow">Personal settings</p>
+      <h1>Profile</h1>
+    </div>
+  </section>
+
+  <form
+    class="profile-grid"
+    method="post"
+    data-loading-form
+    data-loading-message="Saving your profile and refreshing your weight trend."
+  >
+    <div class="form-status" data-loading-status hidden>
+      <span class="spinner" aria-hidden="true"></span>
+      <span data-loading-status-text></span>
+    </div>
+    <label>
+      Name
+      <input name="name" value="{{ profile.name or '' }}" autocomplete="name">
+    </label>
+    <label>
+      Age
+      <input type="number" name="age" value="{{ profile.age or '' }}" min="1" max="120">
+    </label>
+    <label>
+      Gender
+      <select name="gender">
+        {% for value, label in [('male', 'Male'), ('female', 'Female'), ('other', 'Other')] %}
+          <option value="{{ value }}" {{ 'selected' if profile.gender == value else '' }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Height
+      <input type="number" name="height_cm" value="{{ profile.height_cm or '' }}" min="80" max="240">
+      <span>cm</span>
+    </label>
+    <label>
+      Current weight
+      <input type="number" name="weight_kg" value="{{ profile.weight_kg or '' }}" step="0.1" min="20" max="300">
+      <span>kg</span>
+    </label>
+    <label>
+      Goal weight
+      <input type="number" name="goal_weight_kg" value="{{ profile.goal_weight_kg or '' }}" step="0.1" min="20" max="300">
+      <span>kg</span>
+    </label>
+    <label>
+      Activity level
+      <select name="activity_level">
+        {% for value, label in [('low', 'Low'), ('moderate', 'Moderate'), ('high', 'High')] %}
+          <option value="{{ value }}" {{ 'selected' if profile.activity_level == value else '' }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Goal
+      <select name="goal">
+        {% for value, label in [('fat_loss', 'Fat loss'), ('maintenance', 'Maintenance'), ('muscle_gain', 'Muscle gain')] %}
+          <option value="{{ value }}" {{ 'selected' if profile.goal == value else '' }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" data-loading-label="Saving...">Save profile</button>
+  </form>
+{% endblock %}

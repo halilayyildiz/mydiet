@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Weight · MyDiet{% endblock %}
+
+{% block content %}
+  <section class="toolbar">
+    <div>
+      <p class="eyebrow">Body weight</p>
+      <h1>Weight log</h1>
+    </div>
+  </section>
+
+  <section class="weight-layout">
+    <form
+      class="weight-log-panel"
+      method="post"
+      action="{{ url_for('save_weight') }}"
+      data-loading-form
+      data-loading-message="Logging your weight."
+    >
+      <div class="form-status" data-loading-status hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <span data-loading-status-text></span>
+      </div>
+      <label>
+        Date
+        <input type="date" name="date" value="{{ today }}" required>
+      </label>
+      <label>
+        Weight
+        <input type="number" name="weight_kg" inputmode="decimal" step="0.1" min="20" max="300" placeholder="82.4" required>
+      </label>
+      <button type="submit" data-loading-label="Logging...">Log weight</button>
+    </form>
+
+    <section class="result-panel">
+      <h2>Recent weights</h2>
+      {% if weight_logs %}
+        <dl class="analysis-list">
+          {% for log in weight_logs %}
+            <div><dt>{{ log.date }}</dt><dd>{{ log.weight_kg }} kg</dd></div>
+          {% endfor %}
+        </dl>
+      {% else %}
+        <p class="muted">No weight logs yet.</p>
+      {% endif %}
+    </section>
+  </section>
+{% endblock %}

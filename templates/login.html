@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MyDiet Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body class="login-body">
+    <main class="login-panel">
+      <div class="brandmark login-brand">
+        <span class="brand-icon">M</span>
+        <span>MyDiet</span>
+      </div>
+      <form method="post" class="stack-form">
+        <label>
+          Password
+          <input name="password" type="password" autocomplete="current-password" required autofocus>
+        </label>
+        <button type="submit">Enter</button>
+      </form>
+    </main>
+  </body>
+</html>

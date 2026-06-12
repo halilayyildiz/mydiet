@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · MyDiet{% endblock %}
+
+{% block content %}
+  <section class="toolbar">
+    <div>
+      <p class="eyebrow">Personal dashboard</p>
+      <h1>Daily calorie balance</h1>
+    </div>
+    <form class="range-control" method="get">
+      {% for key, days in range_options.items() %}
+        <button name="range" value="{{ key }}" class="{{ 'selected' if range_key == key else '' }}">
+          {{ days }} days
+        </button>
+      {% endfor %}
+    </form>
+  </section>
+
+  <section class="metric-grid" aria-label="Daily average metrics">
+    <article class="metric">
+      <span><i class="metric-icon food" aria-hidden="true">🍽</i>Food</span>
+      <strong>{{ averages.food }}</strong>
+      <small>kcal/day eaten</small>
+    </article>
+    <article class="metric">
+      <span><i class="metric-icon burned" aria-hidden="true">🔥</i>Burned</span>
+      <strong>{{ averages.burned }}</strong>
+      <small>kcal/day burned</small>
+    </article>
+    <article class="metric">
+      <span><i class="metric-icon activity" aria-hidden="true">⚡</i>Activity</span>
+      <strong>{{ averages.activity }}</strong>
+      <small>active kcal/day</small>
+    </article>
+    <article class="metric {{ 'positive' if averages.deficit >= 0 else 'negative' }}">
+      <span><i class="metric-icon deficit" aria-hidden="true">↘</i>Deficit</span>
+      <strong>{{ averages.deficit }}</strong>
+      <small>kcal/day balance</small>
+    </article>
+  </section>
+
+  <section class="chart-section">
+    <div class="section-heading">
+      <div>
+        <h2>Last {{ range_options[range_key] }} days</h2>
+        <p class="section-subtitle">{{ recorded_days }} recorded days</p>
+      </div>
+      <a href="{{ url_for('entry_form', date=today) }}">Add today</a>
+    </div>
+    <div class="chart-wrap">
+      <div id="calorieChart" class="svg-chart" role="img" aria-label="Calorie trend chart"></div>
+    </div>
+    <div class="legend">
+      <span><i class="swatch food"></i>Food</span>
+      <span><i class="swatch burned"></i>Burned</span>
+      <span><i class="swatch activity"></i>Activity</span>
+    </div>
+  </section>
+
+  <section class="chart-section">
+    <div class="section-heading">
+      <h2>Weight trend</h2>
+      <a href="{{ url_for('weight') }}">Update weight</a>
+    </div>
+    <div class="chart-wrap compact">
+      <div id="weightChart" class="svg-chart" role="img" aria-label="Weight trend chart"></div>
+    </div>
+  </section>
+
+  <section class="calendar-section">
+    <div class="section-heading">
+      <h2>Calorie deficit calendar</h2>
+      <form method="get" class="month-form">
+        <input type="hidden" name="range" value="{{ range_key }}">
+        <input type="month" name="month" value="{{ current_month }}">
+        <button type="submit">Show</button>
+      </form>
+    </div>
+    <div class="weekday-grid" aria-hidden="true">
+      <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+    </div>
+    <div class="calendar-grid">
+      {% for day in calendar_days %}
+        {% if day.blank %}
+          <div class="calendar-day blank"></div>
+        {% else %}
+          <a class="calendar-day {{ day.tone }}" href="{{ url_for('entry_form', date=day.date) }}">
+            <span>{{ day.day }}</span>
+            <strong>{{ day.deficit }}</strong>
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    window.MYDIET_TRENDS = {{ trends | tojson }};
+    window.MYDIET_WEIGHTS = {{ weight_series | tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='charts.js') }}"></script>
+{% endblock %}

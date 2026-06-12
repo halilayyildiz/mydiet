@@ -1,0 +1,20 @@
+{
+  "default": {
+    "gemini_model": "gemini-3.5-flash",
+    "analysis_prompt_path": "config/analysis_prompt.en.txt",
+    "upload_dir": "uploads",
+    "allowed_upload_extensions": ["jpg", "jpeg", "png", "webp"],
+    "max_upload_mb": 8,
+    "timezone": "Europe/Amsterdam"
+  },
+  "environments": {
+    "staging": {
+      "google_cloud_project": "mydiet-499222",
+      "firestore_database": "mydiet-db-prod"
+    },
+    "prod": {
+      "google_cloud_project": "mydiet-499222",
+      "firestore_database": "mydiet-db-prod"
+    }
+  }
+}

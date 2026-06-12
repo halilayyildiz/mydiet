@@ -1,0 +1,14 @@
+[Unit]
+Description=MyDiet Flask app
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mydiet/app
+EnvironmentFile=/opt/mydiet/app/.env
+ExecStart=/opt/mydiet/app/.venv/bin/mydiet
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
