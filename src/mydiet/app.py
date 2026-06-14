@@ -34,7 +34,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20260614-1"
+ASSET_VERSION = "20260614-2"
 
 
 def create_app(

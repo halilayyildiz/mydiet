@@ -1032,4 +1032,33 @@ h2 {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .calendar-section {
+    padding: 16px 12px;
+  }
+
+  .weekday-grid,
+  .calendar-grid {
+    gap: 4px;
+  }
+
+  .calendar-day {
+    min-height: 50px;
+    padding: 4px;
+  }
+
+  .calendar-date {
+    font-size: 10px;
+    left: 5px;
+    top: 5px;
+  }
+
+  .calendar-deficit {
+    font-size: clamp(11px, 3.2vw, 15px);
+    max-width: 100%;
+  }
+
+  .calendar-unit {
+    display: none;
+  }
 }
