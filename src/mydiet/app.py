@@ -34,6 +34,9 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
+ASSET_VERSION = "20260614-1"
+
+
 def create_app(
     settings: Settings | None = None,
     repository: DietRepository | MemoryDietRepository | None = None,
@@ -46,6 +49,10 @@ def create_app(
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
 
     repo = repository or (MemoryDietRepository() if settings.use_memory_repository else DietRepository(settings))
+
+    @app.context_processor
+    def inject_asset_version() -> dict[str, str]:
+        return {"asset_version": ASSET_VERSION}
 
     @app.before_request
     def require_login() -> Any:

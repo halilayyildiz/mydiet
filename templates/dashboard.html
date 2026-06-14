@@ -131,6 +131,6 @@
     window.MYDIET_TRENDS = {{ trends | tojson }};
     window.MYDIET_WEIGHTS = {{ weight_series | tojson }};
   </script>
-  <script src="{{ url_for('static', filename='charts.js') }}"></script>
-  <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='charts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='dashboard.js', v=asset_version) }}" defer></script>
 {% endblock %}
