@@ -90,12 +90,16 @@ textarea {
   position: relative;
 }
 
-.nav-menu[open]::before {
+.menu-backdrop {
   background: rgba(27, 35, 40, 0.28);
-  content: "";
+  display: none;
   inset: 0;
   position: fixed;
   z-index: 28;
+}
+
+.nav-menu[open] .menu-backdrop {
+  display: block;
 }
 
 .menu-button {
