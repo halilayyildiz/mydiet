@@ -24,6 +24,13 @@ def test_dashboard_renders_with_memory_repository() -> None:
     assert response.status_code == 200
     assert b"Daily calorie balance" in response.data
     assert b"Calorie deficit calendar" in response.data
+    assert b"Open navigation menu" in response.data
+    assert b'<div class="menu-title">MyDiet</div>' in response.data
+    assert b">Dashboard</a>" in response.data
+    assert b">Entry</a>" in response.data
+    assert b">Weight</a>" in response.data
+    assert b">Profile</a>" in response.data
+    assert b'class="logout-form"' in response.data
     assert b"Log out" in response.data
 
 
@@ -108,9 +115,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260614-2" in response.data
-    assert b"/static/charts.js?v=20260614-2" in response.data
-    assert b"/static/dashboard.js?v=20260614-2" in response.data
+    assert b"/static/styles.css?v=20260614-5" in response.data
+    assert b"/static/charts.js?v=20260614-5" in response.data
+    assert b"/static/dashboard.js?v=20260614-5" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -272,7 +279,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260614-2" in response.data
+    assert b"/static/forms.js?v=20260614-5" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
