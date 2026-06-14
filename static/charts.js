@@ -77,22 +77,6 @@
     return rows.filter((row) => row.has_data !== false && series.some((item) => row[item.key] !== undefined));
   }
 
-  function roundedRect(x, y, width, height, radius) {
-    const r = Math.min(radius, width / 2, Math.abs(height) / 2);
-    return `
-      M ${x + r} ${y}
-      H ${x + width - r}
-      Q ${x + width} ${y} ${x + width} ${y + r}
-      V ${y + height - r}
-      Q ${x + width} ${y + height} ${x + width - r} ${y + height}
-      H ${x + r}
-      Q ${x} ${y + height} ${x} ${y + height - r}
-      V ${y + r}
-      Q ${x} ${y} ${x + r} ${y}
-      Z
-    `;
-  }
-
   function point(row, index, rows, key, width, height, pad, min, max) {
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
@@ -124,10 +108,118 @@
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
     const baseY = height - pad.bottom;
+    const ticks = [niceMax, Math.round(niceMax / 2), 0];
+    const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
+
+    const grid = ticks
+      .map((tick) => {
+        const y = pad.top + chartHeight - (tick / niceMax) * chartHeight;
+        return `
+          <line x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}" class="health-grid-line"></line>
+          <text x="8" y="${y + 4}" class="chart-axis-label">${formatValue(tick)}</text>
+        `;
+      })
+      .join("");
+
+    function energyPath(key) {
+      return plotRows
+        .map((row, pathIndex) => {
+          const sourceIndex = rows.indexOf(row);
+          const p = point(row, sourceIndex, rows, key, width, height, pad, 0, niceMax);
+          return `${pathIndex === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+        })
+        .join(" ");
+    }
+
+    const xLabelsAndTicks = rows
+      .map((row, index) => {
+        const p = point(row, index, rows, "burned", width, height, pad, 0, niceMax);
+        const label = index % labelEvery === 0 || index === rows.length - 1
+          ? `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
+          : "";
+        const tick = row.has_data === false
+          ? `<line x1="${p.x}" y1="${baseY - 8}" x2="${p.x}" y2="${baseY}" class="health-empty-tick"></line>`
+          : "";
+        return `${tick}${label}`;
+      })
+      .join("");
+
+    const dots = plotRows
+      .flatMap((row) => {
+        const sourceIndex = rows.indexOf(row);
+        const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, 0, niceMax);
+        const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, 0, niceMax);
+        return [
+          `<circle data-chart-index="${sourceIndex}" cx="${burnedPoint.x}" cy="${burnedPoint.y}" r="4.8" fill="${colors.burned}" class="health-dot health-dot-burned"></circle>`,
+          `<circle data-chart-index="${sourceIndex}" cx="${foodPoint.x}" cy="${foodPoint.y}" r="4.8" fill="${colors.food}" class="health-dot health-dot-food"></circle>`,
+        ];
+      })
+      .join("");
+
+    const points = plotRows
+      .map((row, index) => {
+        const sourceIndex = rows.indexOf(row);
+        const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, 0, niceMax);
+        const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, 0, niceMax);
+        const burned = Number(row.burned || 0);
+        const activity = Math.min(Number(row.activity || 0), burned);
+        const basal = Math.max(burned - activity, 0);
+        return {
+          index: sourceIndex,
+          x: burnedPoint.x,
+          y: Math.min(burnedPoint.y, foodPoint.y),
+          html: `
+            <strong>${escapeHtml(row.date)}</strong>
+            <span><i style="background:${colors.food}"></i>Consumed ${formatValue(row.food)} kcal</span>
+            <span><i style="background:${colors.burned}"></i>Burned ${formatValue(burned)} kcal</span>
+            <span><i style="background:${colors.burned}"></i>Basal ${formatValue(basal)} kcal</span>
+            <span><i style="background:${colors.activity}"></i>Activity ${formatValue(row.activity)} kcal</span>
+          `,
+        };
+      });
+
+    container.innerHTML = `
+      <svg viewBox="0 0 ${width} ${height}" class="chart-svg health-chart-svg">
+        ${grid}
+        <path d="${energyPath("burned")}" fill="none" stroke="${colors.burned}" class="health-line health-line-burned"></path>
+        <path d="${energyPath("food")}" fill="none" stroke="${colors.food}" class="health-line health-line-food"></path>
+        ${dots}
+        ${xLabelsAndTicks}
+      </svg>
+    `;
+    attachTooltip(container, points);
+  }
+
+  function pathFor(rows, key, width, height, pad, min, max) {
+    return rows
+      .map((row, pathIndex) => {
+        const sourceIndex = rows.indexOf(row);
+        const p = point(row, sourceIndex, rows, key, width, height, pad, min, max);
+        return `${pathIndex === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+      })
+      .join(" ");
+  }
+
+  function renderActivityChart(container, rows) {
+    if (!container) return;
+    const width = Math.max(container.clientWidth, 320);
+    const height = 238;
+    const pad = { top: 24, right: 20, bottom: 42, left: 48 };
+    const plotRows = dataRows(rows, [{ key: "activity" }]);
+
+    if (!rows.length || !plotRows.length) {
+      container.innerHTML = `<div class="empty-chart">No activity logs yet.</div>`;
+      return;
+    }
+
+    const values = plotRows.map((row) => Number(row.activity || 0));
+    const maxValue = Math.max(...values, 100);
+    const niceMax = Math.ceil(maxValue / 100) * 100;
+    const chartWidth = width - pad.left - pad.right;
+    const chartHeight = height - pad.top - pad.bottom;
+    const baseY = height - pad.bottom;
     const slot = chartWidth / Math.max(rows.length, 1);
-    const barWidth = Math.max(8, Math.min(22, slot * 0.56));
-    const foodWidth = Math.max(5, barWidth * 0.52);
-    const activityWidth = Math.max(4, barWidth * 0.28);
+    const barWidth = Math.max(8, Math.min(24, slot * 0.52));
     const ticks = [niceMax, Math.round(niceMax / 2), 0];
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
@@ -143,9 +235,9 @@
 
     const bars = rows
       .map((row, index) => {
-        const x = pad.left + slot * index + slot / 2;
+        const x = pad.left + (rows.length <= 1 ? chartWidth / 2 : chartWidth * (index / (rows.length - 1)));
         const label = index % labelEvery === 0 || index === rows.length - 1
-          ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${row.date.slice(5)}</text>`
+          ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
           : "";
         if (row.has_data === false) {
           return `
@@ -154,40 +246,30 @@
           `;
         }
 
-        const burnedHeight = Math.max(4, (Number(row.burned || 0) / niceMax) * chartHeight);
-        const foodHeight = Math.max(4, (Number(row.food || 0) / niceMax) * chartHeight);
-        const activityHeight = Math.max(3, (Number(row.activity || 0) / niceMax) * chartHeight);
-        const burnedY = baseY - burnedHeight;
-        const foodY = baseY - foodHeight;
-        const activityY = baseY - activityHeight;
-
+        const activity = Number(row.activity || 0);
+        const barHeight = Math.max(4, (activity / niceMax) * chartHeight);
+        const y = baseY - barHeight;
         return `
-          <path data-chart-index="${index}" class="health-bar health-bar-burned" d="${roundedRect(x - barWidth / 2, burnedY, barWidth, burnedHeight, 8)}" fill="${colors.burned}" opacity="0.18"></path>
-          <path data-chart-index="${index}" class="health-bar health-bar-food" d="${roundedRect(x - foodWidth / 2, foodY, foodWidth, foodHeight, 6)}" fill="${colors.food}" opacity="0.92"></path>
-          <path data-chart-index="${index}" class="health-bar health-bar-activity" d="${roundedRect(x + barWidth / 2 - activityWidth, activityY, activityWidth, activityHeight, 4)}" fill="${colors.activity}" opacity="0.9"></path>
+          <rect data-chart-index="${index}" class="health-bar health-bar-activity" x="${x - barWidth / 2}" y="${y}" width="${barWidth}" height="${barHeight}" rx="7" fill="${colors.activity}" opacity="0.9"></rect>
           ${label}
         `;
       })
       .join("");
 
-    const points = rows
-      .map((row, index) => {
-        if (row.has_data === false) return null;
-        const x = pad.left + slot * index + slot / 2;
-        const y = pad.top + chartHeight - (Number(row.burned || row.food || 0) / niceMax) * chartHeight;
-        return {
-          index,
-          x,
-          y,
-          html: `
-            <strong>${escapeHtml(row.date)}</strong>
-            <span><i style="background:${colors.food}"></i>Food ${formatValue(row.food)} kcal</span>
-            <span><i style="background:${colors.burned}"></i>Burned ${formatValue(row.burned)} kcal</span>
-            <span><i style="background:${colors.activity}"></i>Activity ${formatValue(row.activity)} kcal</span>
-          `,
-        };
-      })
-      .filter(Boolean);
+    const points = plotRows.map((row) => {
+      const sourceIndex = rows.indexOf(row);
+      const x = pad.left + (rows.length <= 1 ? chartWidth / 2 : chartWidth * (sourceIndex / (rows.length - 1)));
+      const y = pad.top + chartHeight - (Number(row.activity || 0) / niceMax) * chartHeight;
+      return {
+        index: sourceIndex,
+        x,
+        y,
+        html: `
+          <strong>${escapeHtml(row.date)}</strong>
+          <span><i style="background:${colors.activity}"></i>Activity ${formatValue(row.activity)} kcal</span>
+        `,
+      };
+    });
 
     container.innerHTML = `
       <svg viewBox="0 0 ${width} ${height}" class="chart-svg health-chart-svg">
@@ -196,16 +278,6 @@
       </svg>
     `;
     attachTooltip(container, points);
-  }
-
-  function pathFor(rows, key, width, height, pad, min, max) {
-    return rows
-      .map((row, pathIndex) => {
-        const sourceIndex = rows.indexOf(row);
-        const p = point(row, sourceIndex, rows, key, width, height, pad, min, max);
-        return `${pathIndex === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
-      })
-      .join(" ");
   }
 
   function renderWeightChart(container, rows) {
@@ -257,7 +329,7 @@
       .map((row, index) => {
         if (index % labelEvery !== 0 && index !== rows.length - 1) return "";
         const p = point(row, index, rows, "weight", width, height, pad, min, max);
-        return `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${row.date.slice(5)}</text>`;
+        return `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`;
       })
       .join("");
 
@@ -289,6 +361,7 @@
 
   function renderAll() {
     renderEnergyChart(document.getElementById("calorieChart"), window.MYDIET_TRENDS || []);
+    renderActivityChart(document.getElementById("activityChart"), window.MYDIET_TRENDS || []);
     renderWeightChart(document.getElementById("weightChart"), window.MYDIET_WEIGHTS || []);
   }
 

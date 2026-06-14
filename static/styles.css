@@ -174,6 +174,7 @@ h2 {
 }
 
 .metric,
+.balance-card,
 .chart-section,
 .calendar-section,
 .result-panel,
@@ -245,6 +246,147 @@ h2 {
 
 .metric.negative strong {
   color: var(--red);
+}
+
+.balance-card {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 20px 22px;
+}
+
+.balance-head {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.balance-result {
+  border-left: 1px solid var(--line);
+  min-width: 142px;
+  padding-left: 18px;
+  text-align: right;
+}
+
+.balance-result span,
+.balance-result small {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.balance-result strong {
+  display: block;
+  font-size: 32px;
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 5px 0 2px;
+}
+
+.balance-card.positive .balance-result strong {
+  color: var(--green);
+}
+
+.balance-card.negative .balance-result strong {
+  color: var(--red);
+}
+
+.balance-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.balance-row {
+  display: grid;
+  gap: 8px;
+}
+
+.balance-label,
+.balance-breakdown {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.balance-label span {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 900;
+  gap: 8px;
+}
+
+.balance-label strong {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.balance-emoji {
+  align-items: center;
+  background: var(--health-bg);
+  border-radius: 999px;
+  display: inline-flex;
+  font-style: normal;
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  width: 28px;
+}
+
+.balance-track {
+  background: #edf3f1;
+  border-radius: 999px;
+  height: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.balance-fill {
+  display: block;
+  height: 100%;
+}
+
+.balance-fill.food {
+  background: var(--coral);
+  border-radius: 999px;
+}
+
+.balance-track.stacked {
+  display: flex;
+}
+
+.balance-fill.basal {
+  background: var(--green);
+}
+
+.balance-fill.activity {
+  background: var(--blue);
+}
+
+.balance-track.stacked .balance-fill:first-child {
+  border-radius: 999px 0 0 999px;
+}
+
+.balance-track.stacked .balance-fill:last-child {
+  border-radius: 0 999px 999px 0;
+}
+
+.balance-breakdown {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  justify-content: flex-start;
+}
+
+.balance-breakdown span {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
 }
 
 .chart-section,
@@ -319,6 +461,20 @@ h2 {
   stroke: rgba(105, 117, 125, 0.34);
   stroke-linecap: round;
   stroke-width: 3;
+}
+
+.health-line {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.health-line-food {
+  opacity: 0.92;
+}
+
+.health-line-burned {
+  opacity: 0.88;
 }
 
 .health-bar {
@@ -441,13 +597,36 @@ h2 {
 }
 
 .month-form {
+  align-items: center;
   display: flex;
   gap: 8px;
 }
 
+.calendar-section.is-loading {
+  opacity: 0.62;
+  pointer-events: none;
+}
+
 .month-form input,
-.month-form button {
+.month-step {
   min-height: 40px;
+}
+
+.month-step {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: inline-flex;
+  font-size: 24px;
+  font-weight: 900;
+  justify-content: center;
+  line-height: 1;
+  text-decoration: none;
+  width: 42px;
+}
+
+.month-step:hover {
+  background: var(--health-bg);
 }
 
 .weekday-grid,
@@ -466,14 +645,16 @@ h2 {
 }
 
 .calendar-day {
-  align-content: space-between;
+  align-content: center;
   aspect-ratio: 1 / 0.82;
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
   display: grid;
+  justify-items: center;
   min-height: 76px;
   padding: 10px;
+  position: relative;
   text-decoration: none;
 }
 
@@ -492,8 +673,37 @@ h2 {
   border: 0;
 }
 
-.calendar-day strong {
-  font-size: 18px;
+.calendar-date {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  left: 9px;
+  line-height: 1;
+  position: absolute;
+  top: 9px;
+}
+
+.calendar-deficit {
+  font-size: clamp(20px, 2.6vw, 32px);
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.calendar-day.good .calendar-deficit {
+  color: var(--green);
+}
+
+.calendar-day.bad .calendar-deficit {
+  color: var(--red);
+}
+
+.calendar-unit {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: 4px;
+  text-transform: uppercase;
 }
 
 .form-layout {
@@ -749,14 +959,50 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .balance-head,
+  .balance-label {
+    align-items: stretch;
+  }
+
+  .balance-head {
+    flex-direction: column;
+  }
+
+  .balance-result {
+    align-items: end;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    min-width: 0;
+    padding-left: 0;
+    padding-top: 12px;
+    text-align: left;
+  }
+
+  .balance-result strong {
+    margin: 0;
+  }
+
   .calendar-day {
     font-size: 12px;
     min-height: 58px;
     padding: 7px;
   }
 
-  .calendar-day strong {
-    font-size: 14px;
+  .calendar-date {
+    font-size: 11px;
+    left: 7px;
+    top: 7px;
+  }
+
+  .calendar-deficit {
+    font-size: 18px;
+  }
+
+  .calendar-unit {
+    font-size: 10px;
   }
 }
 
@@ -776,5 +1022,14 @@ h2 {
 
   .metric strong {
     font-size: 26px;
+  }
+
+  .balance-card {
+    padding: 18px 16px;
+  }
+
+  .balance-breakdown {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

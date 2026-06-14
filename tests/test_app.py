@@ -2,8 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mydiet.app import _trend_series, _weight_series, create_app
+from mydiet.app import (
+    _balance_summary,
+    _date_range_label,
+    _shift_month,
+    _trend_series,
+    _weight_series,
+    create_app,
+)
 from mydiet.firestore_db import MemoryDietRepository
+from mydiet.nutrition import date_window
 from mydiet.settings import Settings
 from werkzeug.security import generate_password_hash
 
@@ -19,7 +27,7 @@ def test_dashboard_renders_with_memory_repository() -> None:
     assert b"Log out" in response.data
 
 
-def test_dashboard_shows_entry_day_average_metrics() -> None:
+def test_dashboard_shows_entry_day_energy_balance() -> None:
     repo = MemoryDietRepository()
     repo.save_entry(
         "halil",
@@ -40,10 +48,37 @@ def test_dashboard_shows_entry_day_average_metrics() -> None:
     response = app.test_client().get("/?range=14d")
 
     assert response.status_code == 200
-    assert b"1400</strong>" in response.data
-    assert b"kcal/day eaten" in response.data
+    assert b"Energy balance" in response.data
+    assert b"Eaten" in response.data
+    assert b"1400 kcal" in response.data
+    assert b"Burned" in response.data
+    assert b"Basal 2100 kcal" in response.data
+    assert b"Activity 700 kcal" in response.data
+    assert b"Deficit" in response.data
+    assert b"recorded days" in response.data
     assert b'<div id="calorieChart" class="svg-chart"' in response.data
+    assert b"Activity trend" in response.data
+    assert b'<div id="activityChart" class="svg-chart"' in response.data
     assert b"Update weight" in response.data
+
+
+def test_balance_summary_builds_bar_segments() -> None:
+    summary = _balance_summary(
+        {
+            "food": 1400,
+            "burned": 2800,
+            "activity": 700,
+            "deficit": 1400,
+        }
+    )
+
+    assert summary["balance_label"] == "Deficit"
+    assert summary["deficit_abs"] == 1400
+    assert summary["food_pct"] == 50
+    assert summary["burned_pct"] == 100
+    assert summary["basal"] == 2100
+    assert summary["basal_pct"] == 75
+    assert summary["activity_pct"] == 25
 
 
 def test_dashboard_weight_series_uses_selected_range() -> None:
@@ -57,7 +92,34 @@ def test_dashboard_weight_series_uses_selected_range() -> None:
     assert response.status_code == 200
     assert b'"weight": 82.4' in response.data
     assert b'"weight": 90.0' not in response.data
-    assert b'"date": "2026-05-31"' in response.data
+    assert f'"date": "{date_window(14)[0]}"'.encode() in response.data
+
+
+def test_dashboard_calendar_has_month_navigation() -> None:
+    app = create_app(settings=_settings(), repository=MemoryDietRepository())
+
+    response = app.test_client().get("/?range=30d&month=2026-01")
+
+    assert response.status_code == 200
+    assert b'aria-label="Previous month"' in response.data
+    assert b"data-calendar-link" in response.data
+    assert b"/?range=30d&amp;month=2025-12" in response.data
+    assert b'aria-label="Next month"' in response.data
+    assert b"/?range=30d&amp;month=2026-02" in response.data
+    assert b'data-calendar-month' in response.data
+    assert b">Show</button>" not in response.data
+    assert b"/static/dashboard.js" in response.data
+
+
+def test_shift_month_handles_year_edges() -> None:
+    assert _shift_month("2026-01", -1) == "2025-12"
+    assert _shift_month("2026-12", 1) == "2027-01"
+
+
+def test_date_range_label_formats_month_context() -> None:
+    assert _date_range_label("2026-06-01", "2026-06-14") == "June 1-14, 2026"
+    assert _date_range_label("2026-05-31", "2026-06-14") == "May 31 - Jun 14, 2026"
+    assert _date_range_label("2025-12-31", "2026-01-02") == "Dec 31, 2025 - Jan 2, 2026"
 
 
 def test_trend_series_marks_empty_days_without_zero_values() -> None:

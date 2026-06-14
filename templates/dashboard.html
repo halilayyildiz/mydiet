@@ -16,34 +16,50 @@
     </form>
   </section>
 
-  <section class="metric-grid" aria-label="Daily average metrics">
-    <article class="metric">
-      <span><i class="metric-icon food" aria-hidden="true">🍽</i>Food</span>
-      <strong>{{ averages.food }}</strong>
-      <small>kcal/day eaten</small>
-    </article>
-    <article class="metric">
-      <span><i class="metric-icon burned" aria-hidden="true">🔥</i>Burned</span>
-      <strong>{{ averages.burned }}</strong>
-      <small>kcal/day burned</small>
-    </article>
-    <article class="metric">
-      <span><i class="metric-icon activity" aria-hidden="true">⚡</i>Activity</span>
-      <strong>{{ averages.activity }}</strong>
-      <small>active kcal/day</small>
-    </article>
-    <article class="metric {{ 'positive' if averages.deficit >= 0 else 'negative' }}">
-      <span><i class="metric-icon deficit" aria-hidden="true">↘</i>Deficit</span>
-      <strong>{{ averages.deficit }}</strong>
-      <small>kcal/day balance</small>
-    </article>
+  <section class="balance-card {{ 'positive' if balance.deficit >= 0 else 'negative' }}" aria-label="Daily average energy balance">
+    <div class="balance-head">
+      <div>
+        <p class="eyebrow">Daily average</p>
+        <h2>Energy balance</h2>
+      </div>
+      <div class="balance-result">
+        <span>{{ balance.balance_label }}</span>
+        <strong>{{ balance.deficit_abs }}</strong>
+        <small>kcal/day</small>
+      </div>
+    </div>
+    <div class="balance-bars">
+      <div class="balance-row">
+        <div class="balance-label">
+          <span><i class="balance-emoji" aria-hidden="true">🍽</i>Eaten</span>
+          <strong>{{ balance.food }} kcal</strong>
+        </div>
+        <div class="balance-track" aria-hidden="true">
+          <span class="balance-fill food" style="width: {{ balance.food_pct }}%"></span>
+        </div>
+      </div>
+      <div class="balance-row">
+        <div class="balance-label">
+          <span><i class="balance-emoji" aria-hidden="true">🔥</i>Burned</span>
+          <strong>{{ balance.burned }} kcal</strong>
+        </div>
+        <div class="balance-track stacked" aria-hidden="true">
+          <span class="balance-fill basal" style="width: {{ balance.basal_pct }}%"></span>
+          <span class="balance-fill activity" style="width: {{ balance.activity_pct }}%"></span>
+        </div>
+        <div class="balance-breakdown">
+          <span><i class="swatch burned"></i>Basal {{ balance.basal }} kcal</span>
+          <span><i class="swatch activity"></i>Activity {{ balance.activity }} kcal</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="chart-section">
     <div class="section-heading">
       <div>
         <h2>Last {{ range_options[range_key] }} days</h2>
-        <p class="section-subtitle">{{ recorded_days }} recorded days</p>
+        <p class="section-subtitle">{{ chart_range_label }} · {{ recorded_days }} recorded days</p>
       </div>
       <a href="{{ url_for('entry_form', date=today) }}">Add today</a>
     </div>
@@ -51,9 +67,23 @@
       <div id="calorieChart" class="svg-chart" role="img" aria-label="Calorie trend chart"></div>
     </div>
     <div class="legend">
-      <span><i class="swatch food"></i>Food</span>
+      <span><i class="swatch food"></i>Consumed</span>
       <span><i class="swatch burned"></i>Burned</span>
-      <span><i class="swatch activity"></i>Activity</span>
+    </div>
+  </section>
+
+  <section class="chart-section">
+    <div class="section-heading">
+      <div>
+        <h2>Activity trend</h2>
+        <p class="section-subtitle">Active calories by day</p>
+      </div>
+    </div>
+    <div class="chart-wrap compact">
+      <div id="activityChart" class="svg-chart" role="img" aria-label="Activity calorie trend chart"></div>
+    </div>
+    <div class="legend">
+      <span><i class="swatch activity"></i>Activity calories</span>
     </div>
   </section>
 
@@ -70,10 +100,11 @@
   <section class="calendar-section">
     <div class="section-heading">
       <h2>Calorie deficit calendar</h2>
-      <form method="get" class="month-form">
+      <form method="get" class="month-form" data-calendar-form>
         <input type="hidden" name="range" value="{{ range_key }}">
-        <input type="month" name="month" value="{{ current_month }}">
-        <button type="submit">Show</button>
+        <a class="month-step" href="{{ url_for('dashboard', range=range_key, month=previous_month) }}" aria-label="Previous month" data-calendar-link>‹</a>
+        <input type="month" name="month" value="{{ current_month }}" aria-label="Calendar month" data-calendar-month>
+        <a class="month-step" href="{{ url_for('dashboard', range=range_key, month=next_month) }}" aria-label="Next month" data-calendar-link>›</a>
       </form>
     </div>
     <div class="weekday-grid" aria-hidden="true">
@@ -85,8 +116,9 @@
           <div class="calendar-day blank"></div>
         {% else %}
           <a class="calendar-day {{ day.tone }}" href="{{ url_for('entry_form', date=day.date) }}">
-            <span>{{ day.day }}</span>
-            <strong>{{ day.deficit }}</strong>
+            <span class="calendar-date">{{ day.day }}</span>
+            <strong class="calendar-deficit">{{ day.deficit }}</strong>
+            <span class="calendar-unit">kcal</span>
           </a>
         {% endif %}
       {% endfor %}
@@ -100,4 +132,5 @@
     window.MYDIET_WEIGHTS = {{ weight_series | tojson }};
   </script>
   <script src="{{ url_for('static', filename='charts.js') }}"></script>
+  <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
 {% endblock %}

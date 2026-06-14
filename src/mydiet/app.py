@@ -93,6 +93,7 @@ def create_app(
             start_date=month_dates[0],
             end_date=month_dates[-1],
         )
+        averages = _averages(entries)
         return render_template(
             "dashboard.html",
             active_page="dashboard",
@@ -100,11 +101,15 @@ def create_app(
             range_options=RANGE_OPTIONS,
             trends=_trend_series(dates, entries),
             totals=_totals(entries),
-            averages=_averages(entries),
+            averages=averages,
+            balance=_balance_summary(averages),
             recorded_days=len(entries),
+            chart_range_label=_date_range_label(dates[0], dates[-1]),
             weight_series=_weight_series(dates, weights),
             calendar_days=_calendar_days(month_dates, month_entries),
             current_month=month,
+            previous_month=_shift_month(month, -1),
+            next_month=_shift_month(month, 1),
             today=today_iso(),
         )
 
@@ -313,6 +318,24 @@ def _calendar_days(month_dates: list[str], entries: list[dict[str, Any]]) -> lis
     return blanks + days
 
 
+def _shift_month(month: str, offset: int) -> str:
+    year, month_number = (int(part) for part in month.split("-", 1))
+    month_index = year * 12 + (month_number - 1) + offset
+    shifted_year = month_index // 12
+    shifted_month = month_index % 12 + 1
+    return f"{shifted_year:04d}-{shifted_month:02d}"
+
+
+def _date_range_label(start_date: str, end_date: str) -> str:
+    start = parse_iso_date(start_date)
+    end = parse_iso_date(end_date)
+    if start.year == end.year and start.month == end.month:
+        return f"{start.strftime('%B')} {start.day}-{end.day}, {end.year}"
+    if start.year == end.year:
+        return f"{start.strftime('%b')} {start.day} - {end.strftime('%b')} {end.day}, {end.year}"
+    return f"{start.strftime('%b')} {start.day}, {start.year} - {end.strftime('%b')} {end.day}, {end.year}"
+
+
 def _totals(entries: list[dict[str, Any]]) -> dict[str, int]:
     totals = {"food": 0, "burned": 0, "activity": 0, "deficit": 0}
     for entry in entries:
@@ -328,6 +351,29 @@ def _averages(entries: list[dict[str, Any]]) -> dict[str, int]:
     totals = _totals(entries)
     divisor = max(len(entries), 1)
     return {key: round(value / divisor) for key, value in totals.items()}
+
+
+def _balance_summary(averages: dict[str, int]) -> dict[str, Any]:
+    food = max(int(averages.get("food") or 0), 0)
+    burned = max(int(averages.get("burned") or 0), 0)
+    activity = max(int(averages.get("activity") or 0), 0)
+    basal = max(burned - activity, 0)
+    deficit = int(averages.get("deficit") or burned - food)
+    max_value = max(food, burned, 1)
+
+    return {
+        "food": food,
+        "burned": burned,
+        "activity": activity,
+        "basal": basal,
+        "deficit": deficit,
+        "deficit_abs": abs(deficit),
+        "balance_label": "Deficit" if deficit >= 0 else "Surplus",
+        "food_pct": round(food / max_value * 100),
+        "burned_pct": round(burned / max_value * 100),
+        "basal_pct": round(basal / max_value * 100),
+        "activity_pct": round(min(activity, burned) / max_value * 100),
+    }
 
 
 def _optional_int(value: str | None) -> int | None:
