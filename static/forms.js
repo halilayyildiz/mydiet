@@ -1,4 +1,9 @@
 (function () {
+  const text = {
+    saving: "Saving...",
+    ...(window.MYDIET_FORM_TEXT || {}),
+  };
+
   function setLoading(form) {
     if (form.dataset.submitting === "true") {
       return false;
@@ -10,14 +15,14 @@
     const status = form.querySelector("[data-loading-status]");
     const statusText = form.querySelector("[data-loading-status-text]");
     if (status && statusText) {
-      statusText.textContent = form.dataset.loadingMessage || "Saving...";
+      statusText.textContent = form.dataset.loadingMessage || text.saving;
       status.hidden = false;
     }
 
     const submitButtons = form.querySelectorAll('button[type="submit"]');
     submitButtons.forEach((button) => {
       button.dataset.defaultLabel = button.textContent.trim();
-      button.textContent = button.dataset.loadingLabel || "Saving...";
+      button.textContent = button.dataset.loadingLabel || text.saving;
       button.disabled = true;
     });
 

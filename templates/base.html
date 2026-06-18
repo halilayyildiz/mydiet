@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,28 +8,28 @@
   </head>
   <body>
     <header class="site-header">
-      <details class="nav-menu">
-        <summary class="menu-button" aria-label="Open navigation menu">
-          <span></span>
-          <span></span>
-          <span></span>
-        </summary>
-        <div class="menu-backdrop" data-menu-close></div>
-        <nav class="menu-panel" aria-label="Primary navigation">
-          <div class="menu-title">MyDiet</div>
-          <a class="{{ 'active' if active_page == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a class="{{ 'active' if active_page == 'entry' else '' }}" href="{{ url_for('entry_form') }}">Entry</a>
-          <a class="{{ 'active' if active_page == 'weight' else '' }}" href="{{ url_for('weight') }}">Weight</a>
-          <a class="{{ 'active' if active_page == 'profile' else '' }}" href="{{ url_for('profile') }}">Profile</a>
-        </nav>
-      </details>
       <a class="brandmark" href="{{ url_for('dashboard') }}" aria-label="MyDiet home">
         <span class="brand-icon">M</span>
         <span>MyDiet</span>
       </a>
-      <form class="logout-form" action="{{ url_for('logout') }}" method="post">
-        <button class="logout-button" type="submit">Log out</button>
+      <form class="language-form" action="{{ url_for('set_language') }}" method="post" aria-label="{{ t.language }}">
+        <input type="hidden" name="next" value="{{ request.full_path }}">
+        <select name="lang" aria-label="{{ t.language }}" onchange="this.form.submit()">
+          <option value="tr" {{ 'selected' if lang == 'tr' else '' }}>TR</option>
+          <option value="en" {{ 'selected' if lang == 'en' else '' }}>EN</option>
+        </select>
       </form>
+      <details class="account-menu">
+        <summary class="account-button" aria-label="{{ username }}">
+          <span>{{ username }}</span>
+        </summary>
+        <div class="account-panel">
+          <a class="{{ 'active' if active_page == 'profile' else '' }}" href="{{ url_for('profile') }}">{{ t.profile }}</a>
+          <form action="{{ url_for('logout') }}" method="post">
+            <button type="submit">{{ t.log_out }}</button>
+          </form>
+        </div>
+      </details>
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -46,8 +46,10 @@
       {% block content %}{% endblock %}
     </main>
 
+    <script>
+      window.MYDIET_FORM_TEXT = {{ {"saving": t.saving} | tojson }};
+    </script>
     <script src="{{ url_for('static', filename='forms.js', v=asset_version) }}" defer></script>
-    <script src="{{ url_for('static', filename='nav.js', v=asset_version) }}" defer></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

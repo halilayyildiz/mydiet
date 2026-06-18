@@ -81,6 +81,7 @@ def fallback_analysis(
     profile: dict[str, Any],
     *,
     reason: str = "Set GEMINI_API_KEY to calculate from diary text and images.",
+    language: str = "en",
 ) -> dict[str, Any]:
     weight = _number(profile.get("weight_kg")) or 80
     height = _number(profile.get("height_cm")) or 175
@@ -91,6 +92,9 @@ def fallback_analysis(
     food_items = _rough_food_items(diary_text, food)
     activity = _rough_activity_calories(diary_text)
     burned = round(max(bmr * 1.25 + activity, 1200))
+    summary = "Saved without Gemini analysis. Values are rough placeholders."
+    if language == "tr":
+        summary = "Gemini analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
     return {
         "food_calories": food,
         "food_items": food_items,
@@ -101,7 +105,7 @@ def fallback_analysis(
         "carbs_g": 0,
         "fat_g": 0,
         "confidence": "low",
-        "summary": "Saved without Gemini analysis. Values are rough placeholders.",
+        "summary": summary,
         "assumptions": [reason],
     }
 

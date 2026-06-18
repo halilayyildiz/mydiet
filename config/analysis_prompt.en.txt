@@ -21,13 +21,13 @@ Return only a JSON object with this exact shape:
   "carbs_g": number,
   "fat_g": number,
   "confidence": "low" | "medium" | "high",
-  "summary": "short English summary",
-  "assumptions": ["short assumption"]
+  "summary": "short summary in {output_language}",
+  "assumptions": ["short assumption in {output_language}"]
 }}
 
 Definitions:
 - food_calories: calories eaten.
-- food_items: every identifiable food or drink from the diary, with estimated calories, macro grams, and the closest meal bucket. Use short names like "eggs and toast" or "chicken salad".
+- food_items: every identifiable food or drink from the diary, with estimated calories, macro grams, and the closest meal bucket. Use short names in {output_language}, like "eggs and toast" or "chicken salad" for English.
 - food_items[].meal: use "morning" for breakfast/morning drinks, "lunch" for midday food, "dinner" for evening food, and "snacks" for snacks outside meals.
 - protein_g, carbs_g, fat_g at the top level: total macro grams across all food_items for the day.
 - activity_calories: active calories burned through exercise and movement mentioned by user.
@@ -35,9 +35,11 @@ Definitions:
 - calorie_deficit: burned_calories - food_calories.
 - Use the profile to estimate BMR when enough fields exist.
 - If data is missing, make conservative estimates and list assumptions.
-- Keep all text in English.
+- Keep all user-facing text in {output_language}: food item names, summary, and assumptions.
+- Keep JSON keys and food_items[].meal values exactly as specified, regardless of output language.
 
 Date: {entry_date}
+Output language: {output_language}
 Profile JSON: {profile_json}
 User diary:
 {diary_text}

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from mydiet.app import (
     _balance_summary,
+    _calendar_days,
     _date_range_label,
     _shift_month,
     _trend_series,
@@ -24,16 +25,34 @@ def test_dashboard_renders_with_memory_repository() -> None:
     assert response.status_code == 200
     assert b"Daily calorie balance" in response.data
     assert b"Calorie deficit calendar" in response.data
-    assert b"Open navigation menu" in response.data
-    assert b'<div class="menu-title">MyDiet</div>' in response.data
-    assert b">Dashboard</a>" in response.data
-    assert b">Entry</a>" in response.data
-    assert b">Weight</a>" in response.data
+    assert b'class="nav-menu"' not in response.data
+    assert b"Open navigation menu" not in response.data
+    assert b'<span>halil</span>' in response.data
+    assert b'class="account-menu"' in response.data
     assert b">Profile</a>" in response.data
-    assert b"data-menu-close" in response.data
-    assert b"/static/nav.js?v=20260618-5" in response.data
-    assert b'class="logout-form"' in response.data
+    assert b"data-menu-close" not in response.data
+    assert b"/static/nav.js" not in response.data
     assert b"Log out" in response.data
+
+
+def test_language_switch_renders_turkish_ui() -> None:
+    app = create_app(settings=_settings(), repository=MemoryDietRepository())
+
+    response = app.test_client().post(
+        "/language",
+        data={"lang": "tr", "next": "/"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b'<html lang="tr">' in response.data
+    assert "Günlük kalori dengesi".encode() in response.data
+    assert "Kalori açığı takvimi".encode() in response.data
+    assert b"<span>halil</span>" in response.data
+    assert "Profil".encode() in response.data
+    assert "Çıkış".encode() in response.data
+    assert b'<select name="lang"' in response.data
+    assert b'<option value="tr" selected>TR</option>' in response.data
 
 
 def test_dashboard_shows_entry_day_energy_balance() -> None:
@@ -119,9 +138,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260618-5" in response.data
-    assert b"/static/charts.js?v=20260618-5" in response.data
-    assert b"/static/dashboard.js?v=20260618-5" in response.data
+    assert b"/static/styles.css?v=20260618-9" in response.data
+    assert b"/static/charts.js?v=20260618-9" in response.data
+    assert b"/static/dashboard.js?v=20260618-9" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -133,6 +152,20 @@ def test_date_range_label_formats_month_context() -> None:
     assert _date_range_label("2026-06-01", "2026-06-14") == "June 1-14, 2026"
     assert _date_range_label("2026-05-31", "2026-06-14") == "May 31 - Jun 14, 2026"
     assert _date_range_label("2025-12-31", "2026-01-02") == "Dec 31, 2025 - Jan 2, 2026"
+    assert _date_range_label("2026-06-01", "2026-06-14", lang="tr") == "1-14 Haziran 2026"
+
+
+def test_calendar_days_uses_neutral_tone_for_zero_deficit() -> None:
+    days = _calendar_days(
+        ["2026-06-01", "2026-06-02", "2026-06-03"],
+        [
+            {"date": "2026-06-01", "analysis": {"calorie_deficit": 0}},
+            {"date": "2026-06-02", "analysis": {"calorie_deficit": 450}},
+            {"date": "2026-06-03", "analysis": {"calorie_deficit": -250}},
+        ],
+    )
+
+    assert [day["tone"] for day in days] == ["neutral", "good", "bad"]
 
 
 def test_trend_series_marks_empty_days_without_zero_values() -> None:
@@ -185,6 +218,29 @@ def test_entry_post_saves_fallback_analysis() -> None:
     assert response.status_code == 200
     assert entry["analysis"]["confidence"] == "low"
     assert repo.get_profile("halil") == {}
+
+
+def test_entry_post_uses_selected_language_for_fallback_analysis() -> None:
+    repo = MemoryDietRepository()
+    app = create_app(settings=_settings(), repository=repo)
+    client = app.test_client()
+    client.post("/language", data={"lang": "tr", "next": "/"})
+
+    response = client.post(
+        "/entry",
+        data={
+            "date": "2026-06-13",
+            "diary_text": "Sabah yumurta, öğlen tavuk salata, 45 dakika yürüyüş.",
+        },
+        follow_redirects=True,
+    )
+    entry = repo.get_entry("halil", "2026-06-13")
+
+    assert response.status_code == 200
+    assert entry["analysis"]["summary"] == "Gemini analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
+    assert entry["analysis"]["assumptions"] == [
+        "Günlük metni ve görsellerden hesaplamak için GEMINI_API_KEY ayarla."
+    ]
 
 
 def test_entry_post_replaces_existing_day() -> None:
@@ -283,7 +339,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260618-5" in response.data
+    assert b"/static/forms.js?v=20260618-9" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -391,7 +447,7 @@ def test_login_post_accepts_configured_password() -> None:
     )
     app = create_app(settings=settings, repository=MemoryDietRepository())
 
-    response = app.test_client().post("/login", data={"password": "secret"})
+    response = app.test_client().post("/login", data={"username": "halil", "password": "secret"})
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/"
@@ -409,10 +465,48 @@ def test_login_post_accepts_configured_password_hash() -> None:
     )
     app = create_app(settings=settings, repository=MemoryDietRepository())
 
-    response = app.test_client().post("/login", data={"password": "secret"})
+    response = app.test_client().post("/login", data={"username": "halil", "password": "secret"})
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/"
+
+
+def test_login_post_rejects_wrong_username() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        GEMINI_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    app = create_app(settings=settings, repository=MemoryDietRepository())
+
+    response = app.test_client().post("/login", data={"username": "other", "password": "secret"})
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/login"
+
+
+def test_login_form_includes_username_field() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        GEMINI_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    app = create_app(settings=settings, repository=MemoryDietRepository())
+
+    response = app.test_client().get("/login")
+
+    assert response.status_code == 200
+    assert b'name="username"' in response.data
+    assert b'value="halil"' in response.data
+    assert b'autocomplete="username"' in response.data
 
 
 def _settings() -> Settings:

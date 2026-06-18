@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,10 +14,14 @@
       </div>
       <form method="post" class="stack-form">
         <label>
-          Password
-          <input name="password" type="password" autocomplete="current-password" required autofocus>
+          {{ t.username }}
+          <input name="username" value="halil" autocomplete="username" required autofocus>
         </label>
-        <button type="submit">Enter</button>
+        <label>
+          {{ t.password }}
+          <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">{{ t.enter }}</button>
       </form>
     </main>
   </body>

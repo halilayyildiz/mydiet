@@ -35,7 +35,222 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20260618-5"
+ASSET_VERSION = "20260618-9"
+
+TEXTS = {
+    "en": {
+        "activity": "Activity",
+        "activity_calories": "Activity calories",
+        "activity_level": "Activity level",
+        "activity_trend": "Activity trend",
+        "active_calories_by_day": "Active calories by day",
+        "add_today": "Add today",
+        "age": "Age",
+        "analysis": "Analysis",
+        "analyze_day": "Analyze day",
+        "analyzing": "Analyzing...",
+        "analyzing_day": "Analyzing your day with Gemini. This can take a few seconds.",
+        "basal": "Basal",
+        "body_weight": "Body weight",
+        "burned": "Burned",
+        "calendar_month": "Calendar month",
+        "calorie_deficit_calendar": "Calorie deficit calendar",
+        "calorie_deficit_trend": "Calorie deficit trend",
+        "calorie_trend_chart": "Calorie trend chart",
+        "carbs": "Carbs",
+        "confidence": "Confidence",
+        "consumed": "Consumed",
+        "current_weight": "Current weight",
+        "daily_average": "Daily average",
+        "daily_average_energy_balance": "Daily average energy balance",
+        "daily_calorie_balance": "Daily calorie balance",
+        "daily_deficit_or_surplus": "Daily deficit or surplus",
+        "dashboard": "Dashboard",
+        "language": "Language",
+        "date": "Date",
+        "days": "days",
+        "deficit": "Deficit",
+        "dinner": "Dinner",
+        "diary_placeholder": "Example: breakfast eggs and toast, lunch chicken salad, 45 minute walk...",
+        "eaten": "Eaten",
+        "energy_balance": "Energy balance",
+        "enter": "Enter",
+        "entry": "Entry",
+        "fat": "Fat",
+        "fat_loss": "Fat loss",
+        "female": "Female",
+        "food": "Food",
+        "food_and_activity_notes": "Food and activity notes",
+        "food_breakdown": "Food breakdown",
+        "gender": "Gender",
+        "goal": "Goal",
+        "goal_weight": "Goal weight",
+        "height": "Height",
+        "high": "High",
+        "last_days": "Last {days} days",
+        "log_out": "Log out",
+        "log_weight": "Log weight",
+        "logging": "Logging...",
+        "logging_weight": "Logging your weight.",
+        "low": "Low",
+        "lunch": "Lunch",
+        "male": "Male",
+        "maintenance": "Maintenance",
+        "moderate": "Moderate",
+        "morning": "Morning",
+        "muscle_gain": "Muscle gain",
+        "name": "Name",
+        "nav_label": "Primary navigation",
+        "next_month": "Next month",
+        "no_analysis": "No analysis for this date yet.",
+        "no_weight_logs": "No weight logs yet.",
+        "open_menu": "Open navigation menu",
+        "other": "Other",
+        "password": "Password",
+        "personal_dashboard": "Personal dashboard",
+        "personal_settings": "Personal settings",
+        "previous_month": "Previous month",
+        "profile": "Profile",
+        "protein": "Protein",
+        "recent_weights": "Recent weights",
+        "recorded_days": "recorded days",
+        "save_profile": "Save profile",
+        "saving": "Saving...",
+        "saving_profile": "Saving your profile and refreshing your weight trend.",
+        "snacks": "Snacks",
+        "surplus": "Surplus",
+        "update_weight": "Update weight",
+        "weight": "Weight",
+        "weight_log": "Weight log",
+        "weight_trend": "Weight trend",
+        "what_happened_today": "What happened today?",
+        "day_saved": "Day saved and analyzed.",
+        "enter_weight": "Enter a weight before logging it.",
+        "incorrect_password": "Incorrect password.",
+        "username": "Username",
+        "profile_saved": "Profile saved.",
+        "weight_logged": "Weight logged.",
+    },
+    "tr": {
+        "activity": "Aktivite",
+        "activity_calories": "Aktivite kalorisi",
+        "activity_level": "Aktivite seviyesi",
+        "activity_trend": "Aktivite trendi",
+        "active_calories_by_day": "Günlük aktivite kalorisi",
+        "add_today": "Bugünü ekle",
+        "age": "Yaş",
+        "analysis": "Analiz",
+        "analyze_day": "Günü analiz et",
+        "analyzing": "Analiz ediliyor...",
+        "analyzing_day": "Günün Gemini ile analiz ediliyor. Birkaç saniye sürebilir.",
+        "basal": "Bazal",
+        "body_weight": "Vücut ağırlığı",
+        "burned": "Yakılan",
+        "calendar_month": "Takvim ayı",
+        "calorie_deficit_calendar": "Kalori açığı takvimi",
+        "calorie_deficit_trend": "Kalori açığı trendi",
+        "calorie_trend_chart": "Kalori trend grafiği",
+        "carbs": "Karbonhidrat",
+        "confidence": "Güven",
+        "consumed": "Alınan",
+        "current_weight": "Mevcut kilo",
+        "daily_average": "Günlük ortalama",
+        "daily_average_energy_balance": "Günlük ortalama enerji dengesi",
+        "daily_calorie_balance": "Günlük kalori dengesi",
+        "daily_deficit_or_surplus": "Günlük açık veya fazlalık",
+        "dashboard": "Panel",
+        "date": "Tarih",
+        "days": "gün",
+        "deficit": "Açık",
+        "dinner": "Akşam",
+        "diary_placeholder": "Örnek: kahvaltıda yumurta ve tost, öğlen tavuk salata, 45 dakika yürüyüş...",
+        "eaten": "Yenilen",
+        "energy_balance": "Enerji dengesi",
+        "enter": "Giriş",
+        "entry": "Kayıt",
+        "fat": "Yağ",
+        "fat_loss": "Yağ kaybı",
+        "female": "Kadın",
+        "food": "Yemek",
+        "food_and_activity_notes": "Yemek ve aktivite notları",
+        "food_breakdown": "Yemek dökümü",
+        "gender": "Cinsiyet",
+        "goal": "Hedef",
+        "goal_weight": "Hedef kilo",
+        "height": "Boy",
+        "high": "Yüksek",
+        "language": "Dil",
+        "last_days": "Son {days} gün",
+        "log_out": "Çıkış",
+        "log_weight": "Kilo gir",
+        "logging": "Kaydediliyor...",
+        "logging_weight": "Kilon kaydediliyor.",
+        "low": "Düşük",
+        "lunch": "Öğlen",
+        "male": "Erkek",
+        "maintenance": "Korumak",
+        "moderate": "Orta",
+        "morning": "Sabah",
+        "muscle_gain": "Kas kazanımı",
+        "name": "İsim",
+        "nav_label": "Ana navigasyon",
+        "next_month": "Sonraki ay",
+        "no_analysis": "Bu tarih için henüz analiz yok.",
+        "no_weight_logs": "Henüz kilo kaydı yok.",
+        "open_menu": "Navigasyon menüsünü aç",
+        "other": "Diğer",
+        "password": "Şifre",
+        "personal_dashboard": "Kişisel dashboard",
+        "personal_settings": "Kişisel ayarlar",
+        "previous_month": "Önceki ay",
+        "profile": "Profil",
+        "protein": "Protein",
+        "recent_weights": "Son kilolar",
+        "recorded_days": "kayıtlı gün",
+        "save_profile": "Profili kaydet",
+        "saving": "Kaydediliyor...",
+        "saving_profile": "Profilin kaydediliyor ve kilo trendin yenileniyor.",
+        "snacks": "Atıştırmalıklar",
+        "surplus": "Fazla",
+        "update_weight": "Kilo güncelle",
+        "weight": "Kilo",
+        "weight_log": "Kilo kaydı",
+        "weight_trend": "Kilo trendi",
+        "what_happened_today": "Bugün ne oldu?",
+        "day_saved": "Gün kaydedildi ve analiz edildi.",
+        "enter_weight": "Kaydetmeden önce kilo gir.",
+        "incorrect_password": "Kullanıcı adı veya şifre yanlış.",
+        "username": "Kullanıcı adı",
+        "profile_saved": "Profil kaydedildi.",
+        "weight_logged": "Kilo kaydedildi.",
+    },
+}
+
+CHART_TEXT_KEYS = {
+    "activity",
+    "basal",
+    "burned",
+    "consumed",
+    "deficit",
+    "surplus",
+}
+
+CHART_TEXT_EXTRA = {
+    "en": {
+        "activityEmpty": "No activity logs yet.",
+        "dataEmpty": "No data for this range yet.",
+        "deficitEmpty": "No deficit logs yet.",
+        "weight": "Weight",
+        "weightEmpty": "No weight logs yet.",
+    },
+    "tr": {
+        "activityEmpty": "Henüz aktivite kaydı yok.",
+        "dataEmpty": "Bu aralık için henüz veri yok.",
+        "deficitEmpty": "Henüz kalori açığı kaydı yok.",
+        "weight": "Kilo",
+        "weightEmpty": "Henüz kilo kaydı yok.",
+    },
+}
 
 
 def create_app(
@@ -52,18 +267,37 @@ def create_app(
     repo = repository or (MemoryDietRepository() if settings.use_memory_repository else DietRepository(settings))
 
     @app.context_processor
-    def inject_asset_version() -> dict[str, str]:
-        return {"asset_version": ASSET_VERSION}
+    def inject_globals() -> dict[str, Any]:
+        lang = _current_lang()
+        text = TEXTS[lang]
+        chart_text = {key: text[key] for key in CHART_TEXT_KEYS}
+        chart_text.update(CHART_TEXT_EXTRA[lang])
+        return {
+            "asset_version": ASSET_VERSION,
+            "chart_text": chart_text,
+            "lang": lang,
+            "t": text,
+            "username": settings.single_user_id,
+        }
 
     @app.before_request
     def require_login() -> Any:
         if not settings.app_password and not settings.app_password_hash:
             session["authenticated"] = True
-        if request.endpoint in {"login", "login_post", "static", "uploaded_file"}:
+        if request.endpoint in {"login", "login_post", "set_language", "static", "uploaded_file"}:
             return None
         if not session.get("authenticated"):
             return redirect(url_for("login", next=request.full_path))
         return None
+
+    @app.post("/language")
+    def set_language() -> Any:
+        lang = request.form.get("lang", "en")
+        session["lang"] = lang if lang in TEXTS else "en"
+        next_url = request.form.get("next") or url_for("dashboard")
+        if not next_url.startswith("/"):
+            next_url = url_for("dashboard")
+        return redirect(next_url)
 
     @app.get("/login")
     def login() -> str:
@@ -71,16 +305,20 @@ def create_app(
 
     @app.post("/login")
     def login_post() -> Any:
+        username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        if _password_matches(settings, password):
+        if username == settings.single_user_id and _password_matches(settings, password):
             session["authenticated"] = True
             return redirect(request.args.get("next") or url_for("dashboard"))
-        flash("Incorrect password.", "error")
+        flash(_t("incorrect_password"), "error")
         return redirect(url_for("login"))
 
     @app.post("/logout")
     def logout() -> Any:
+        lang = session.get("lang")
         session.clear()
+        if lang in TEXTS:
+            session["lang"] = lang
         return redirect(url_for("login"))
 
     @app.get("/")
@@ -112,7 +350,7 @@ def create_app(
             averages=averages,
             balance=_balance_summary(averages),
             recorded_days=len(entries),
-            chart_range_label=_date_range_label(dates[0], dates[-1]),
+            chart_range_label=_date_range_label(dates[0], dates[-1], lang=_current_lang()),
             weight_series=_weight_series(dates, weights),
             calendar_days=_calendar_days(month_dates, month_entries),
             current_month=month,
@@ -141,6 +379,7 @@ def create_app(
         profile = repo.get_profile(settings.single_user_id)
         old_entry = repo.get_entry(settings.single_user_id, entry_date)
         image_paths, image_urls = _save_uploads(request.files.getlist("images"), settings)
+        language = _current_lang()
 
         if settings.gemini_api_key and (diary_text or image_paths):
             try:
@@ -149,17 +388,25 @@ def create_app(
                     profile=profile,
                     entry_date=entry_date,
                     image_paths=image_paths,
+                    language=language,
                 )
                 analysis = normalize_analysis(analysis)
             except Exception as exc:
+                error_summary = f"Gemini analysis failed: {exc}"
+                if language == "tr":
+                    error_summary = f"Gemini analizi başarısız oldu: {exc}"
                 analysis = fallback_analysis(
                     diary_text,
                     profile,
-                    reason=f"Gemini analysis failed: {exc}",
+                    reason=error_summary,
+                    language=language,
                 )
-                analysis["summary"] = f"Gemini analysis failed: {exc}"
+                analysis["summary"] = error_summary
         else:
-            analysis = fallback_analysis(diary_text, profile)
+            reason = "Set GEMINI_API_KEY to calculate from diary text and images."
+            if language == "tr":
+                reason = "Günlük metni ve görsellerden hesaplamak için GEMINI_API_KEY ayarla."
+            analysis = fallback_analysis(diary_text, profile, reason=reason, language=language)
 
         repo.save_entry(
             settings.single_user_id,
@@ -171,7 +418,7 @@ def create_app(
             },
         )
         _delete_uploaded_files(old_entry.get("image_urls") or [], settings)
-        flash("Day saved and analyzed.", "success")
+        flash(_t("day_saved"), "success")
         return redirect(url_for("entry_form", date=entry_date))
 
     @app.get("/weight")
@@ -195,10 +442,10 @@ def create_app(
         entry_date = request.form.get("date") or today_iso()
         weight_text = request.form.get("weight_kg", "").strip()
         if not weight_text:
-            flash("Enter a weight before logging it.", "error")
+            flash(_t("enter_weight"), "error")
             return redirect(url_for("weight"))
         repo.save_weight(settings.single_user_id, entry_date, float(weight_text))
-        flash("Weight logged.", "success")
+        flash(_t("weight_logged"), "success")
         return redirect(url_for("weight"))
 
     @app.get("/profile")
@@ -225,7 +472,7 @@ def create_app(
         repo.save_profile(settings.single_user_id, payload)
         if payload["weight_kg"]:
             repo.save_weight(settings.single_user_id, today_iso(), float(payload["weight_kg"]))
-        flash("Profile saved.", "success")
+        flash(_t("profile_saved"), "success")
         return redirect(url_for("profile"))
 
     @app.get("/uploads/<path:filename>")
@@ -266,6 +513,16 @@ def _delete_uploaded_files(urls: list[str], settings: Settings) -> None:
             path.unlink(missing_ok=True)
         except OSError:
             pass
+
+
+def _current_lang() -> str:
+    lang = str(session.get("lang") or "en")
+    return lang if lang in TEXTS else "en"
+
+
+def _t(key: str) -> str:
+    lang = _current_lang()
+    return TEXTS[lang].get(key, TEXTS["en"].get(key, key))
 
 
 def _trend_series(dates: list[str], entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -321,10 +578,18 @@ def _calendar_days(month_dates: list[str], entries: list[dict[str, Any]]) -> lis
                 "date": date_key,
                 "day": int(date_key[-2:]),
                 "deficit": deficit,
-                "tone": "good" if deficit >= 0 else "bad",
+                "tone": _calendar_tone(deficit),
             }
         )
     return blanks + days
+
+
+def _calendar_tone(deficit: int) -> str:
+    if deficit > 0:
+        return "good"
+    if deficit < 0:
+        return "bad"
+    return "neutral"
 
 
 def _shift_month(month: str, offset: int) -> str:
@@ -335,9 +600,45 @@ def _shift_month(month: str, offset: int) -> str:
     return f"{shifted_year:04d}-{shifted_month:02d}"
 
 
-def _date_range_label(start_date: str, end_date: str) -> str:
+def _date_range_label(start_date: str, end_date: str, *, lang: str = "en") -> str:
     start = parse_iso_date(start_date)
     end = parse_iso_date(end_date)
+    if lang == "tr":
+        month_names = [
+            "",
+            "Ocak",
+            "Şubat",
+            "Mart",
+            "Nisan",
+            "Mayıs",
+            "Haziran",
+            "Temmuz",
+            "Ağustos",
+            "Eylül",
+            "Ekim",
+            "Kasım",
+            "Aralık",
+        ]
+        short_months = [
+            "",
+            "Oca",
+            "Şub",
+            "Mar",
+            "Nis",
+            "May",
+            "Haz",
+            "Tem",
+            "Ağu",
+            "Eyl",
+            "Eki",
+            "Kas",
+            "Ara",
+        ]
+        if start.year == end.year and start.month == end.month:
+            return f"{start.day}-{end.day} {month_names[start.month]} {end.year}"
+        if start.year == end.year:
+            return f"{start.day} {short_months[start.month]} - {end.day} {short_months[end.month]} {end.year}"
+        return f"{start.day} {short_months[start.month]} {start.year} - {end.day} {short_months[end.month]} {end.year}"
     if start.year == end.year and start.month == end.month:
         return f"{start.strftime('%B')} {start.day}-{end.day}, {end.year}"
     if start.year == end.year:

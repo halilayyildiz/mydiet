@@ -32,10 +32,11 @@ class GeminiDietClient:
         profile: dict[str, Any],
         entry_date: str,
         image_paths: list[Path],
+        language: str = "en",
     ) -> dict[str, Any]:
         safe_profile = _json_safe(profile)
         parts: list[types.Part] = [
-            types.Part(text=analysis_prompt(self._settings, diary_text, safe_profile, entry_date))
+            types.Part(text=analysis_prompt(self._settings, diary_text, safe_profile, entry_date, language=language))
         ]
         for path in image_paths:
             mime_type = mimetypes.guess_type(path.name)[0] or "image/jpeg"
@@ -54,13 +55,24 @@ def analysis_prompt(
     diary_text: str,
     profile: dict[str, Any],
     entry_date: str,
+    *,
+    language: str = "en",
 ) -> str:
     template = settings.analysis_prompt_path.read_text(encoding="utf-8")
+    output_language = _output_language(language)
     return template.format(
         entry_date=entry_date,
+        language=language,
+        output_language=output_language,
         profile_json=json.dumps(profile, ensure_ascii=False),
         diary_text=diary_text,
     ).strip()
+
+
+def _output_language(language: str) -> str:
+    if language == "tr":
+        return "Turkish"
+    return "English"
 
 
 def _json_safe(value: Any) -> Any:

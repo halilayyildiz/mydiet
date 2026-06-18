@@ -56,3 +56,18 @@ def test_default_analysis_prompt_requests_food_items() -> None:
     assert '"meal"' in prompt
     assert '"protein_g"' in prompt
     assert "total macro grams" in prompt
+
+
+def test_analysis_prompt_uses_selected_output_language() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="",
+        APP_PASSWORD_HASH="",
+        GEMINI_API_KEY="",
+        FLASK_SECRET_KEY="test",
+    )
+
+    prompt = analysis_prompt(settings, "yumurta yedim", {}, "2026-06-13", language="tr")
+
+    assert "Output language: Turkish" in prompt
+    assert "Keep all user-facing text in Turkish" in prompt

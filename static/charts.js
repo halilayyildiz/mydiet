@@ -8,6 +8,20 @@
     activity: css.getPropertyValue("--blue").trim(),
     red: css.getPropertyValue("--red").trim(),
   };
+  const text = {
+    activity: "Activity",
+    activityEmpty: "No activity logs yet.",
+    basal: "Basal",
+    burned: "Burned",
+    consumed: "Consumed",
+    dataEmpty: "No data for this range yet.",
+    deficit: "Deficit",
+    deficitEmpty: "No deficit logs yet.",
+    surplus: "Surplus",
+    weight: "Weight",
+    weightEmpty: "No weight logs yet.",
+    ...(window.MYDIET_CHART_TEXT || {}),
+  };
 
   function formatValue(value) {
     return Math.round(Number(value || 0)).toLocaleString();
@@ -99,7 +113,7 @@
     ]);
 
     if (!rows.length || !plotRows.length) {
-      container.innerHTML = `<div class="empty-chart">No data for this range yet.</div>`;
+      container.innerHTML = `<div class="empty-chart">${escapeHtml(text.dataEmpty)}</div>`;
       return;
     }
 
@@ -171,10 +185,10 @@
           y: Math.min(burnedPoint.y, foodPoint.y),
           html: `
             <strong>${escapeHtml(row.date)}</strong>
-            <span><i style="background:${colors.food}"></i>Consumed ${formatValue(row.food)} kcal</span>
-            <span><i style="background:${colors.burned}"></i>Burned ${formatValue(burned)} kcal</span>
-            <span><i style="background:${colors.burned}"></i>Basal ${formatValue(basal)} kcal</span>
-            <span><i style="background:${colors.activity}"></i>Activity ${formatValue(row.activity)} kcal</span>
+            <span><i style="background:${colors.food}"></i>${escapeHtml(text.consumed)} ${formatValue(row.food)} kcal</span>
+            <span><i style="background:${colors.burned}"></i>${escapeHtml(text.burned)} ${formatValue(burned)} kcal</span>
+            <span><i style="background:${colors.burned}"></i>${escapeHtml(text.basal)} ${formatValue(basal)} kcal</span>
+            <span><i style="background:${colors.activity}"></i>${escapeHtml(text.activity)} ${formatValue(row.activity)} kcal</span>
           `,
         };
       });
@@ -209,7 +223,7 @@
     const plotRows = dataRows(rows, [{ key: "activity" }]);
 
     if (!rows.length || !plotRows.length) {
-      container.innerHTML = `<div class="empty-chart">No activity logs yet.</div>`;
+      container.innerHTML = `<div class="empty-chart">${escapeHtml(text.activityEmpty)}</div>`;
       return;
     }
 
@@ -267,7 +281,7 @@
         y,
         html: `
           <strong>${escapeHtml(row.date)}</strong>
-          <span><i style="background:${colors.activity}"></i>Activity ${formatValue(row.activity)} kcal</span>
+          <span><i style="background:${colors.activity}"></i>${escapeHtml(text.activity)} ${formatValue(row.activity)} kcal</span>
         `,
       };
     });
@@ -289,7 +303,7 @@
     const plotRows = dataRows(rows, [{ key: "deficit" }]);
 
     if (!rows.length || !plotRows.length) {
-      container.innerHTML = `<div class="empty-chart">No deficit logs yet.</div>`;
+      container.innerHTML = `<div class="empty-chart">${escapeHtml(text.deficitEmpty)}</div>`;
       return;
     }
 
@@ -348,7 +362,7 @@
       const p = point(row, sourceIndex, rows, "deficit", width, height, pad, -niceMax, niceMax);
       const deficit = Number(row.deficit || 0);
       const color = deficit >= 0 ? colors.burned : colors.red;
-      const label = deficit >= 0 ? "Deficit" : "Surplus";
+      const label = deficit >= 0 ? text.deficit : text.surplus;
       return {
         index: sourceIndex,
         x: p.x,
@@ -377,7 +391,7 @@
     const plotRows = rows.filter((row) => row.has_data !== false && row.weight);
 
     if (!plotRows.length) {
-      container.innerHTML = `<div class="empty-chart">No weight logs yet.</div>`;
+      container.innerHTML = `<div class="empty-chart">${escapeHtml(text.weightEmpty)}</div>`;
       return;
     }
 
@@ -441,7 +455,7 @@
           y: p.y,
           html: `
             <strong>${escapeHtml(row.date)}</strong>
-            <span><i style="background:${colors.burned}"></i>Weight ${Number(row.weight).toFixed(1)} kg</span>
+            <span><i style="background:${colors.burned}"></i>${escapeHtml(text.weight)} ${Number(row.weight).toFixed(1)} kg</span>
           `,
         };
       }),
