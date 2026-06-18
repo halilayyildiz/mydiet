@@ -571,6 +571,12 @@ h2 {
   stroke-width: 1;
 }
 
+.health-zero-line {
+  stroke: rgba(27, 35, 40, 0.22);
+  stroke-dasharray: 4 5;
+  stroke-width: 1.5;
+}
+
 .health-empty-tick {
   stroke: rgba(105, 117, 125, 0.34);
   stroke-linecap: round;
@@ -708,6 +714,10 @@ h2 {
 
 .swatch.activity {
   background: var(--blue);
+}
+
+.swatch.deficit-negative {
+  background: var(--red);
 }
 
 .month-form {
@@ -911,6 +921,7 @@ h2 {
 }
 
 .stack-form textarea {
+  min-height: 280px;
   resize: vertical;
 }
 
@@ -965,6 +976,95 @@ h2 {
 .analysis-list dd {
   font-weight: 900;
   margin: 0;
+}
+
+.macro-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.macro-summary div {
+  background: var(--health-bg);
+  border: 1px solid rgba(220, 229, 232, 0.72);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.macro-summary span,
+.food-item span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.macro-summary strong {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.food-breakdown {
+  margin: 18px 0;
+}
+
+.food-breakdown h3 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+.food-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.food-group {
+  display: grid;
+  gap: 8px;
+}
+
+.food-group-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.food-group-heading h4 {
+  font-size: 14px;
+  margin: 0;
+}
+
+.food-group-heading strong {
+  color: var(--green);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.food-list {
+  display: grid;
+  gap: 8px;
+}
+
+.food-item {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.food-item div {
+  display: grid;
+  gap: 3px;
+}
+
+.food-item b {
+  white-space: nowrap;
 }
 
 .assumptions {
@@ -1162,5 +1262,14 @@ h2 {
 
   .calendar-unit {
     display: none;
+  }
+
+  .macro-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .food-item {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

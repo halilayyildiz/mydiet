@@ -26,6 +26,7 @@ from mydiet.nutrition import (
     RANGE_OPTIONS,
     date_window,
     fallback_analysis,
+    food_item_groups,
     month_window,
     normalize_analysis,
     parse_iso_date,
@@ -34,7 +35,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20260614-6"
+ASSET_VERSION = "20260618-5"
 
 
 def create_app(
@@ -129,6 +130,7 @@ def create_app(
             active_page="entry",
             entry=entry,
             entry_date=entry_date,
+            food_groups=food_item_groups(entry.get("analysis") or {}),
             today=today_iso(),
         )
 

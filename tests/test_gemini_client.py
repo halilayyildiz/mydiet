@@ -39,3 +39,20 @@ def test_analysis_prompt_comes_from_configured_file(tmp_path) -> None:
     assert "Date=2026-06-13" in prompt
     assert 'Profile={"weight_kg": 82.4}' in prompt
     assert "Diary=ate eggs" in prompt
+
+
+def test_default_analysis_prompt_requests_food_items() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="",
+        APP_PASSWORD_HASH="",
+        GEMINI_API_KEY="",
+        FLASK_SECRET_KEY="test",
+    )
+
+    prompt = analysis_prompt(settings, "ate eggs", {}, "2026-06-13")
+
+    assert '"food_items"' in prompt
+    assert '"meal"' in prompt
+    assert '"protein_g"' in prompt
+    assert "total macro grams" in prompt

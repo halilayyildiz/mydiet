@@ -6,6 +6,7 @@
     food: css.getPropertyValue("--coral").trim(),
     burned: css.getPropertyValue("--green").trim(),
     activity: css.getPropertyValue("--blue").trim(),
+    red: css.getPropertyValue("--red").trim(),
   };
 
   function formatValue(value) {
@@ -280,6 +281,94 @@
     attachTooltip(container, points);
   }
 
+  function renderDeficitChart(container, rows) {
+    if (!container) return;
+    const width = Math.max(container.clientWidth, 320);
+    const height = 238;
+    const pad = { top: 24, right: 20, bottom: 42, left: 58 };
+    const plotRows = dataRows(rows, [{ key: "deficit" }]);
+
+    if (!rows.length || !plotRows.length) {
+      container.innerHTML = `<div class="empty-chart">No deficit logs yet.</div>`;
+      return;
+    }
+
+    const values = plotRows.map((row) => Math.abs(Number(row.deficit || 0)));
+    const maxValue = Math.max(...values, 100);
+    const tickStep = 500;
+    const niceMax = Math.max(tickStep, Math.ceil(maxValue / tickStep) * tickStep);
+    const chartWidth = width - pad.left - pad.right;
+    const chartHeight = height - pad.top - pad.bottom;
+    const zeroY = point({ deficit: 0 }, 0, [0], "deficit", width, height, pad, -niceMax, niceMax).y;
+    const slot = chartWidth / Math.max(rows.length, 1);
+    const barWidth = Math.max(8, Math.min(24, slot * 0.52));
+    const ticks = [];
+    for (let tick = niceMax; tick >= -niceMax; tick -= tickStep) {
+      ticks.push(tick);
+    }
+    const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
+
+    const grid = ticks
+      .map((tick) => {
+        const y = point({ deficit: tick }, 0, [0], "deficit", width, height, pad, -niceMax, niceMax).y;
+        return `
+          <line x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}" class="${tick === 0 ? "health-zero-line" : "health-grid-line"}"></line>
+          <text x="8" y="${y + 4}" class="chart-axis-label">${formatValue(tick)}</text>
+        `;
+      })
+      .join("");
+
+    const bars = rows
+      .map((row, index) => {
+        const x = pad.left + (rows.length <= 1 ? chartWidth / 2 : chartWidth * (index / (rows.length - 1)));
+        const label = index % labelEvery === 0 || index === rows.length - 1
+          ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
+          : "";
+        if (row.has_data === false) {
+          return `
+            <line x1="${x}" y1="${zeroY - 5}" x2="${x}" y2="${zeroY + 5}" class="health-empty-tick"></line>
+            ${label}
+          `;
+        }
+
+        const deficit = Number(row.deficit || 0);
+        const y = point(row, index, rows, "deficit", width, height, pad, -niceMax, niceMax).y;
+        const barHeight = Math.max(4, Math.abs(y - zeroY));
+        const barY = deficit >= 0 ? y : zeroY;
+        const fill = deficit >= 0 ? colors.burned : colors.red;
+        return `
+          <rect data-chart-index="${index}" class="health-bar health-bar-deficit" x="${x - barWidth / 2}" y="${barY}" width="${barWidth}" height="${barHeight}" rx="7" fill="${fill}" opacity="0.9"></rect>
+          ${label}
+        `;
+      })
+      .join("");
+
+    const points = plotRows.map((row) => {
+      const sourceIndex = rows.indexOf(row);
+      const p = point(row, sourceIndex, rows, "deficit", width, height, pad, -niceMax, niceMax);
+      const deficit = Number(row.deficit || 0);
+      const color = deficit >= 0 ? colors.burned : colors.red;
+      const label = deficit >= 0 ? "Deficit" : "Surplus";
+      return {
+        index: sourceIndex,
+        x: p.x,
+        y: p.y,
+        html: `
+          <strong>${escapeHtml(row.date)}</strong>
+          <span><i style="background:${color}"></i>${label} ${formatValue(Math.abs(deficit))} kcal</span>
+        `,
+      };
+    });
+
+    container.innerHTML = `
+      <svg viewBox="0 0 ${width} ${height}" class="chart-svg health-chart-svg">
+        ${grid}
+        ${bars}
+      </svg>
+    `;
+    attachTooltip(container, points);
+  }
+
   function renderWeightChart(container, rows) {
     if (!container) return;
     const width = Math.max(container.clientWidth, 320);
@@ -362,6 +451,7 @@
   function renderAll() {
     renderEnergyChart(document.getElementById("calorieChart"), window.MYDIET_TRENDS || []);
     renderActivityChart(document.getElementById("activityChart"), window.MYDIET_TRENDS || []);
+    renderDeficitChart(document.getElementById("deficitChart"), window.MYDIET_TRENDS || []);
     renderWeightChart(document.getElementById("weightChart"), window.MYDIET_WEIGHTS || []);
   }
 

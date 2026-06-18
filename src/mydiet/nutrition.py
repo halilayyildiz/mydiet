@@ -11,6 +11,13 @@ RANGE_OPTIONS = {
     "90d": 90,
 }
 
+MEAL_GROUPS = [
+    ("morning", "Morning"),
+    ("lunch", "Lunch"),
+    ("dinner", "Dinner"),
+    ("snacks", "Snacks"),
+]
+
 
 def parse_iso_date(value: str | None, *, default: date | None = None) -> date:
     if not value:
@@ -44,6 +51,7 @@ def month_window(month: str | None = None) -> list[str]:
 def normalize_analysis(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "food_calories": _number(payload.get("food_calories")),
+        "food_items": _food_items(payload.get("food_items")),
         "activity_calories": _number(payload.get("activity_calories")),
         "burned_calories": _number(payload.get("burned_calories")),
         "calorie_deficit": _number(payload.get("calorie_deficit")),
@@ -54,6 +62,18 @@ def normalize_analysis(payload: dict[str, Any]) -> dict[str, Any]:
         "summary": str(payload.get("summary") or ""),
         "assumptions": _string_list(payload.get("assumptions")),
     }
+
+
+def food_item_groups(analysis: dict[str, Any]) -> list[dict[str, Any]]:
+    groups: dict[str, dict[str, Any]] = {
+        key: {"key": key, "label": label, "calories": 0, "items": []}
+        for key, label in MEAL_GROUPS
+    }
+    for item in _food_items(analysis.get("food_items")):
+        meal_key = _meal_key(item.get("meal") or item.get("name"))
+        groups[meal_key]["calories"] += _number(item.get("calories"))
+        groups[meal_key]["items"].append(item)
+    return [group for group in groups.values() if group["items"]]
 
 
 def fallback_analysis(
@@ -68,10 +88,12 @@ def fallback_analysis(
     gender = str(profile.get("gender") or "").lower()
     bmr = 10 * weight + 6.25 * height - 5 * age + (5 if gender == "male" else -161)
     food = _rough_food_calories(diary_text)
+    food_items = _rough_food_items(diary_text, food)
     activity = _rough_activity_calories(diary_text)
     burned = round(max(bmr * 1.25 + activity, 1200))
     return {
         "food_calories": food,
+        "food_items": food_items,
         "activity_calories": activity,
         "burned_calories": burned,
         "calorie_deficit": burned - food,
@@ -101,6 +123,75 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if str(item).strip()]
+
+
+def _food_items(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    items: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        items.append(
+            {
+                "name": name,
+                "meal": _meal_key(item.get("meal") or name),
+                "calories": _number(item.get("calories")),
+                "protein_g": _number(item.get("protein_g")),
+                "carbs_g": _number(item.get("carbs_g")),
+                "fat_g": _number(item.get("fat_g")),
+            }
+        )
+    return items
+
+
+def _meal_key(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"morning", "breakfast", "sabah"}:
+        return "morning"
+    if text in {"lunch", "noon", "oglen", "öğlen"}:
+        return "lunch"
+    if text in {"dinner", "evening", "aksam", "akşam"}:
+        return "dinner"
+    if text in {"snack", "snacks", "atistirmalik", "atıştırmalık", "atistirmaliklar", "atıştırmalıklar"}:
+        return "snacks"
+    if any(word in text for word in ["breakfast", "morning", "coffee"]):
+        return "morning"
+    if any(word in text for word in ["lunch", "noon"]):
+        return "lunch"
+    if any(word in text for word in ["dinner", "evening"]):
+        return "dinner"
+    if any(word in text for word in ["snack", "strawberry", "nuts"]):
+        return "snacks"
+    return "snacks"
+
+
+def _rough_food_items(text: str, total_calories: int) -> list[dict[str, Any]]:
+    if not total_calories:
+        return []
+    lowered = text.lower()
+    labels = [
+        word
+        for word in ["breakfast", "lunch", "dinner", "snack"]
+        if word in lowered
+    ]
+    if not labels:
+        labels = ["food notes"]
+    calories = round(total_calories / len(labels))
+    return [
+        {
+            "name": label.title(),
+            "meal": _meal_key(label),
+            "calories": calories,
+            "protein_g": 0,
+            "carbs_g": 0,
+            "fat_g": 0,
+        }
+        for label in labels
+    ]
 
 
 def _rough_food_calories(text: str) -> int:

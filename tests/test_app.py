@@ -31,7 +31,7 @@ def test_dashboard_renders_with_memory_repository() -> None:
     assert b">Weight</a>" in response.data
     assert b">Profile</a>" in response.data
     assert b"data-menu-close" in response.data
-    assert b"/static/nav.js?v=20260614-6" in response.data
+    assert b"/static/nav.js?v=20260618-5" in response.data
     assert b'class="logout-form"' in response.data
     assert b"Log out" in response.data
 
@@ -68,6 +68,8 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     assert b'<div id="calorieChart" class="svg-chart"' in response.data
     assert b"Activity trend" in response.data
     assert b'<div id="activityChart" class="svg-chart"' in response.data
+    assert b"Calorie deficit trend" in response.data
+    assert b'<div id="deficitChart" class="svg-chart"' in response.data
     assert b"Update weight" in response.data
 
 
@@ -117,9 +119,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260614-6" in response.data
-    assert b"/static/charts.js?v=20260614-6" in response.data
-    assert b"/static/dashboard.js?v=20260614-6" in response.data
+    assert b"/static/styles.css?v=20260618-5" in response.data
+    assert b"/static/charts.js?v=20260618-5" in response.data
+    assert b"/static/dashboard.js?v=20260618-5" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -281,12 +283,88 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260614-6" in response.data
+    assert b"/static/forms.js?v=20260618-5" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
     assert b"Analyzing..." in response.data
+    assert b"when photos are attached" not in response.data
+    assert b'name="images"' not in response.data
+    assert b"Photos" not in response.data
+    assert b'rows="14"' in response.data
+    assert b"Morning:" in response.data
+    assert b"2 cups of coffee" in response.data
+    assert b"Lunch:" in response.data
+    assert b"Dinner:" in response.data
+    assert b"Activity:" in response.data
     assert b"Log weight" not in response.data
+
+
+def test_entry_form_shows_food_breakdown_and_macros() -> None:
+    repo = MemoryDietRepository()
+    repo.save_entry(
+        "halil",
+        "2026-06-13",
+        {
+            "diary_text": "chicken salad",
+            "image_urls": [],
+            "analysis": {
+                "food_calories": 620,
+                "burned_calories": 2400,
+                "activity_calories": 300,
+                "calorie_deficit": 1780,
+                "protein_g": 45,
+                "carbs_g": 30,
+                "fat_g": 24,
+                "confidence": "medium",
+                "summary": "Estimated chicken salad.",
+                "assumptions": [],
+                "food_items": [
+                    {
+                        "name": "Coffee with milk",
+                        "meal": "morning",
+                        "calories": 80,
+                        "protein_g": 4,
+                        "carbs_g": 6,
+                        "fat_g": 3,
+                    },
+                    {
+                        "name": "Chicken salad",
+                        "meal": "lunch",
+                        "calories": 480,
+                        "protein_g": 39,
+                        "carbs_g": 24,
+                        "fat_g": 21,
+                    },
+                    {
+                        "name": "Strawberries",
+                        "meal": "snacks",
+                        "calories": 60,
+                        "protein_g": 2,
+                        "carbs_g": 12,
+                        "fat_g": 0,
+                    },
+                ],
+            },
+        },
+    )
+    app = create_app(settings=_settings(), repository=repo)
+
+    response = app.test_client().get("/entry?date=2026-06-13")
+
+    assert response.status_code == 200
+    assert b"Protein" in response.data
+    assert b"45g" in response.data
+    assert b"Food breakdown" in response.data
+    assert b"Morning" in response.data
+    assert b"80 kcal" in response.data
+    assert b"Lunch" in response.data
+    assert b"Chicken salad" in response.data
+    assert b"480 kcal" in response.data
+    assert b"39g protein" in response.data
+    assert b"Snacks" in response.data
+    assert b"Strawberries" in response.data
+    assert b"Morning:" not in response.data
 
 
 def test_profile_form_includes_loading_state() -> None:

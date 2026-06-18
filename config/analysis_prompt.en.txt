@@ -4,6 +4,16 @@ Analyze the user's daily notes and optional food/activity images.
 Return only a JSON object with this exact shape:
 {{
   "food_calories": number,
+  "food_items": [
+    {{
+      "name": "food or drink name",
+      "meal": "morning" | "lunch" | "dinner" | "snacks",
+      "calories": number,
+      "protein_g": number,
+      "carbs_g": number,
+      "fat_g": number
+    }}
+  ],
   "activity_calories": number,
   "burned_calories": number,
   "calorie_deficit": number,
@@ -17,6 +27,9 @@ Return only a JSON object with this exact shape:
 
 Definitions:
 - food_calories: calories eaten.
+- food_items: every identifiable food or drink from the diary, with estimated calories, macro grams, and the closest meal bucket. Use short names like "eggs and toast" or "chicken salad".
+- food_items[].meal: use "morning" for breakfast/morning drinks, "lunch" for midday food, "dinner" for evening food, and "snacks" for snacks outside meals.
+- protein_g, carbs_g, fat_g at the top level: total macro grams across all food_items for the day.
 - activity_calories: active calories burned through exercise and movement mentioned by user.
 - burned_calories: estimated total daily energy expenditure, including BMR and activity.
 - calorie_deficit: burned_calories - food_calories.

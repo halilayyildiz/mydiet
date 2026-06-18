@@ -15,7 +15,7 @@
       method="post"
       enctype="multipart/form-data"
       data-loading-form
-      data-loading-message="Analyzing your day with Gemini. This can take a few seconds when photos are attached."
+      data-loading-message="Analyzing your day with Gemini. This can take a few seconds."
     >
       <div class="form-status" data-loading-status hidden>
         <span class="spinner" aria-hidden="true"></span>
@@ -27,11 +27,24 @@
       </label>
       <label>
         Food and activity notes
-        <textarea name="diary_text" rows="10" placeholder="Example: breakfast eggs and toast, lunch chicken salad, 45 minute walk...">{{ entry.diary_text or "" }}</textarea>
-      </label>
-      <label>
-        Photos
-        <input type="file" name="images" accept="image/png,image/jpeg,image/webp" multiple>
+        {% set default_diary_text -%}
+Morning:
+- 2 cups of coffee (about 1/4 milk)
+
+Lunch:
+-
+-
+-
+
+Dinner:
+-
+-
+-
+
+Activity:
+-
+        {%- endset %}
+        <textarea name="diary_text" rows="14" placeholder="Example: breakfast eggs and toast, lunch chicken salad, 45 minute walk...">{{ entry.diary_text or default_diary_text }}</textarea>
       </label>
       <button type="submit" data-loading-label="Analyzing...">Analyze day</button>
     </form>
@@ -47,6 +60,37 @@
           <div><dt>Deficit</dt><dd>{{ analysis.calorie_deficit }} kcal</dd></div>
           <div><dt>Confidence</dt><dd>{{ analysis.confidence }}</dd></div>
         </dl>
+        <div class="macro-summary" aria-label="Daily macro estimate">
+          <div><span>Protein</span><strong>{{ analysis.protein_g or 0 }}g</strong></div>
+          <div><span>Carbs</span><strong>{{ analysis.carbs_g or 0 }}g</strong></div>
+          <div><span>Fat</span><strong>{{ analysis.fat_g or 0 }}g</strong></div>
+        </div>
+        {% if food_groups %}
+          <section class="food-breakdown">
+            <h3>Food breakdown</h3>
+            <div class="food-groups">
+              {% for group in food_groups %}
+                <section class="food-group">
+                  <div class="food-group-heading">
+                    <h4>{{ group.label }}</h4>
+                    <strong>{{ group.calories }} kcal</strong>
+                  </div>
+                  <div class="food-list">
+                    {% for item in group["items"] %}
+                      <article class="food-item">
+                        <div>
+                          <strong>{{ item.name }}</strong>
+                          <span>{{ item.protein_g or 0 }}g protein · {{ item.carbs_g or 0 }}g carbs · {{ item.fat_g or 0 }}g fat</span>
+                        </div>
+                        <b>{{ item.calories or 0 }} kcal</b>
+                      </article>
+                    {% endfor %}
+                  </div>
+                </section>
+              {% endfor %}
+            </div>
+          </section>
+        {% endif %}
         <p>{{ analysis.summary }}</p>
         {% if analysis.assumptions %}
           <ul class="assumptions">
