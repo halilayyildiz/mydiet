@@ -281,6 +281,15 @@ def create_app(
         }
 
     @app.before_request
+    def load_preferred_language() -> None:
+        if session.get("lang") in TEXTS or request.endpoint in {"static", "uploaded_file"}:
+            return
+        profile = repo.get_profile(settings.single_user_id)
+        preferred_language = str(profile.get("preferred_language") or "")
+        if preferred_language in TEXTS:
+            session["lang"] = preferred_language
+
+    @app.before_request
     def require_login() -> Any:
         if not settings.app_password and not settings.app_password_hash:
             session["authenticated"] = True
@@ -293,7 +302,9 @@ def create_app(
     @app.post("/language")
     def set_language() -> Any:
         lang = request.form.get("lang", "en")
-        session["lang"] = lang if lang in TEXTS else "en"
+        selected_lang = lang if lang in TEXTS else "en"
+        session["lang"] = selected_lang
+        repo.save_profile(settings.single_user_id, {"preferred_language": selected_lang})
         next_url = request.form.get("next") or url_for("dashboard")
         if not next_url.startswith("/"):
             next_url = url_for("dashboard")

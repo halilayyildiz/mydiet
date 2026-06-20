@@ -36,7 +36,8 @@ def test_dashboard_renders_with_memory_repository() -> None:
 
 
 def test_language_switch_renders_turkish_ui() -> None:
-    app = create_app(settings=_settings(), repository=MemoryDietRepository())
+    repo = MemoryDietRepository()
+    app = create_app(settings=_settings(), repository=repo)
 
     response = app.test_client().post(
         "/language",
@@ -54,6 +55,19 @@ def test_language_switch_renders_turkish_ui() -> None:
     assert b'class="header-menu language-menu"' in response.data
     assert b'<span>TR</span>' in response.data
     assert b'class="active" type="submit" name="lang" value="tr">TR</button>' in response.data
+    assert repo.get_profile("halil")["preferred_language"] == "tr"
+
+
+def test_dashboard_uses_saved_language_preference() -> None:
+    repo = MemoryDietRepository()
+    repo.save_profile("halil", {"preferred_language": "tr"})
+    app = create_app(settings=_settings(), repository=repo)
+
+    response = app.test_client().get("/")
+
+    assert response.status_code == 200
+    assert b'<html lang="tr">' in response.data
+    assert "Günlük kalori dengesi".encode() in response.data
 
 
 def test_dashboard_shows_entry_day_energy_balance() -> None:
