@@ -100,31 +100,12 @@ button:disabled {
   opacity: 0.72;
 }
 
-.language-form {
-  display: inline-flex;
-  justify-self: end;
-}
-
-.language-form select {
-  appearance: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--ink);
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 900;
-  min-height: 40px;
-  min-width: 74px;
-  padding: 0 8px;
-}
-
-.account-menu {
+.header-menu {
   justify-self: end;
   position: relative;
 }
 
-.account-button {
+.header-menu-button {
   align-items: center;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -141,22 +122,27 @@ button:disabled {
   white-space: nowrap;
 }
 
-.account-button::-webkit-details-marker {
+.language-menu .header-menu-button {
+  min-width: 74px;
+  justify-content: space-between;
+}
+
+.header-menu-button::-webkit-details-marker {
   display: none;
 }
 
-.account-button::after {
+.header-menu-button::after {
   color: var(--muted);
   content: "▾";
   font-size: 12px;
   line-height: 1;
 }
 
-.account-menu[open] .account-button::after {
+.header-menu[open] .header-menu-button::after {
   transform: rotate(180deg);
 }
 
-.account-panel {
+.header-menu-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -171,8 +157,17 @@ button:disabled {
   z-index: 20;
 }
 
-.account-panel a,
-.account-panel button {
+.language-menu .header-menu-panel {
+  min-width: 74px;
+}
+
+.header-menu-panel form {
+  display: grid;
+  gap: 4px;
+}
+
+.header-menu-panel a,
+.header-menu-panel button {
   align-items: center;
   background: transparent;
   border: 0;
@@ -188,9 +183,10 @@ button:disabled {
   width: 100%;
 }
 
-.account-panel a:hover,
-.account-panel a.active,
-.account-panel button:hover {
+.header-menu-panel a:hover,
+.header-menu-panel a.active,
+.header-menu-panel button:hover,
+.header-menu-panel button.active {
   background: var(--health-bg);
 }
 
@@ -1187,13 +1183,14 @@ h2 {
     padding: 10px 14px;
   }
 
-  .language-form select {
+  .language-menu .header-menu-button {
     font-size: 12px;
     min-width: 64px;
   }
 
-  .account-button {
+  .header-menu-button {
     font-size: 12px;
+    min-height: 40px;
     padding: 0 10px;
   }
 

@@ -12,18 +12,23 @@
         <span class="brand-icon">M</span>
         <span>MyDiet</span>
       </a>
-      <form class="language-form" action="{{ url_for('set_language') }}" method="post" aria-label="{{ t.language }}">
-        <input type="hidden" name="next" value="{{ request.full_path }}">
-        <select name="lang" aria-label="{{ t.language }}" onchange="this.form.submit()">
-          <option value="tr" {{ 'selected' if lang == 'tr' else '' }}>TR</option>
-          <option value="en" {{ 'selected' if lang == 'en' else '' }}>EN</option>
-        </select>
-      </form>
-      <details class="account-menu">
-        <summary class="account-button" aria-label="{{ username }}">
+      <details class="header-menu language-menu">
+        <summary class="header-menu-button" aria-label="{{ t.language }}">
+          <span>{{ lang.upper() }}</span>
+        </summary>
+        <div class="header-menu-panel">
+          <form action="{{ url_for('set_language') }}" method="post">
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <button class="{{ 'active' if lang == 'tr' else '' }}" type="submit" name="lang" value="tr">TR</button>
+            <button class="{{ 'active' if lang == 'en' else '' }}" type="submit" name="lang" value="en">EN</button>
+          </form>
+        </div>
+      </details>
+      <details class="header-menu account-menu">
+        <summary class="header-menu-button" aria-label="{{ username }}">
           <span>{{ username }}</span>
         </summary>
-        <div class="account-panel">
+        <div class="header-menu-panel">
           <a class="{{ 'active' if active_page == 'profile' else '' }}" href="{{ url_for('profile') }}">{{ t.profile }}</a>
           <form action="{{ url_for('logout') }}" method="post">
             <button type="submit">{{ t.log_out }}</button>

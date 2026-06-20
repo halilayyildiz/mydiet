@@ -35,7 +35,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20260618-9"
+ASSET_VERSION = "20260620-2"
 
 TEXTS = {
     "en": {

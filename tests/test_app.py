@@ -28,7 +28,7 @@ def test_dashboard_renders_with_memory_repository() -> None:
     assert b'class="nav-menu"' not in response.data
     assert b"Open navigation menu" not in response.data
     assert b'<span>halil</span>' in response.data
-    assert b'class="account-menu"' in response.data
+    assert b'class="header-menu account-menu"' in response.data
     assert b">Profile</a>" in response.data
     assert b"data-menu-close" not in response.data
     assert b"/static/nav.js" not in response.data
@@ -51,8 +51,9 @@ def test_language_switch_renders_turkish_ui() -> None:
     assert b"<span>halil</span>" in response.data
     assert "Profil".encode() in response.data
     assert "Çıkış".encode() in response.data
-    assert b'<select name="lang"' in response.data
-    assert b'<option value="tr" selected>TR</option>' in response.data
+    assert b'class="header-menu language-menu"' in response.data
+    assert b'<span>TR</span>' in response.data
+    assert b'class="active" type="submit" name="lang" value="tr">TR</button>' in response.data
 
 
 def test_dashboard_shows_entry_day_energy_balance() -> None:
@@ -138,9 +139,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260618-9" in response.data
-    assert b"/static/charts.js?v=20260618-9" in response.data
-    assert b"/static/dashboard.js?v=20260618-9" in response.data
+    assert b"/static/styles.css?v=20260620-2" in response.data
+    assert b"/static/charts.js?v=20260620-2" in response.data
+    assert b"/static/dashboard.js?v=20260620-2" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -339,7 +340,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260618-9" in response.data
+    assert b"/static/forms.js?v=20260620-2" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
