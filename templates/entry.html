@@ -62,7 +62,7 @@ Activity:
 -
 {%- endif %}
         {%- endset %}
-        <textarea name="diary_text" rows="14" placeholder="{{ t.diary_placeholder }}">{{ entry.diary_text or default_diary_text }}</textarea>
+        <textarea name="diary_text" rows="18" placeholder="{{ t.diary_placeholder }}">{{ entry.diary_text or default_diary_text }}</textarea>
       </label>
       <button type="submit" data-loading-label="{{ t.analyzing }}">{{ t.analyze_day }}</button>
     </form>
