@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 RANGE_OPTIONS = {
@@ -25,18 +26,32 @@ def parse_iso_date(value: str | None, *, default: date | None = None) -> date:
     return date.fromisoformat(value)
 
 
-def today_iso() -> str:
-    return date.today().isoformat()
+def local_date(timezone_name: str | None = None) -> date:
+    if not timezone_name:
+        return date.today()
+    try:
+        return datetime.now(ZoneInfo(timezone_name)).date()
+    except ZoneInfoNotFoundError:
+        return date.today()
 
 
-def date_window(days: int, *, end: date | None = None) -> list[str]:
-    end_date = end or date.today()
+def today_iso(timezone_name: str | None = None) -> str:
+    return local_date(timezone_name).isoformat()
+
+
+def date_window(
+    days: int,
+    *,
+    end: date | None = None,
+    timezone_name: str | None = None,
+) -> list[str]:
+    end_date = end or local_date(timezone_name)
     start = end_date - timedelta(days=days - 1)
     return [(start + timedelta(days=offset)).isoformat() for offset in range(days)]
 
 
-def month_window(month: str | None = None) -> list[str]:
-    base = date.today()
+def month_window(month: str | None = None, *, timezone_name: str | None = None) -> list[str]:
+    base = local_date(timezone_name)
     if month:
         base = date.fromisoformat(f"{month}-01")
     first = base.replace(day=1)

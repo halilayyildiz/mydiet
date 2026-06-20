@@ -19,6 +19,19 @@ def test_json_safe_converts_datetime_values() -> None:
     assert safe["nested"][0]["seen_at"] == "2026-06-12T00:00:00+00:00"
 
 
+def test_default_gemini_model_tracks_latest_flash() -> None:
+    settings = Settings(
+        APP_ENV="missing-config-env",
+        APP_PASSWORD="",
+        APP_PASSWORD_HASH="",
+        GEMINI_API_KEY="",
+        FLASK_SECRET_KEY="test",
+    )
+    settings.app_config.clear()
+
+    assert settings.gemini_model == "gemini-flash-latest"
+
+
 def test_analysis_prompt_comes_from_configured_file(tmp_path) -> None:
     prompt_path = tmp_path / "prompt.txt"
     prompt_path.write_text(

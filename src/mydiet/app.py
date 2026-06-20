@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import secrets
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -27,6 +27,7 @@ from mydiet.nutrition import (
     date_window,
     fallback_analysis,
     food_item_groups,
+    local_date,
     month_window,
     normalize_analysis,
     parse_iso_date,
@@ -258,6 +259,7 @@ def create_app(
     repository: DietRepository | MemoryDietRepository | None = None,
 ) -> Flask:
     settings = settings or get_settings()
+    _validate_runtime_settings(settings)
     app = Flask(__name__, static_folder="../../static", template_folder="../../templates")
     app.config["SECRET_KEY"] = settings.flask_secret_key
     app.config["MAX_CONTENT_LENGTH"] = settings.max_upload_bytes
@@ -336,15 +338,16 @@ def create_app(
     def dashboard() -> str:
         range_key = request.args.get("range", "14d")
         days = RANGE_OPTIONS.get(range_key, 14)
-        dates = date_window(days)
+        today = today_iso(settings.timezone)
+        dates = date_window(days, timezone_name=settings.timezone)
         entries = repo.list_entries(settings.single_user_id, start_date=dates[0], end_date=dates[-1])
         weights = repo.list_weight_logs(
             settings.single_user_id,
             start_date=dates[0],
             end_date=dates[-1],
         )
-        month = request.args.get("month") or today_iso()[:7]
-        month_dates = month_window(month)
+        month = request.args.get("month") or today[:7]
+        month_dates = month_window(month, timezone_name=settings.timezone)
         month_entries = repo.list_entries(
             settings.single_user_id,
             start_date=month_dates[0],
@@ -367,12 +370,13 @@ def create_app(
             current_month=month,
             previous_month=_shift_month(month, -1),
             next_month=_shift_month(month, 1),
-            today=today_iso(),
+            today=today,
         )
 
     @app.get("/entry")
     def entry_form() -> str:
-        entry_date = request.args.get("date") or today_iso()
+        today = today_iso(settings.timezone)
+        entry_date = request.args.get("date") or today
         entry = repo.get_entry(settings.single_user_id, entry_date)
         return render_template(
             "entry.html",
@@ -380,12 +384,12 @@ def create_app(
             entry=entry,
             entry_date=entry_date,
             food_groups=food_item_groups(entry.get("analysis") or {}),
-            today=today_iso(),
+            today=today,
         )
 
     @app.post("/entry")
     def save_entry() -> Any:
-        entry_date = request.form.get("date") or today_iso()
+        entry_date = request.form.get("date") or today_iso(settings.timezone)
         diary_text = request.form.get("diary_text", "").strip()
         profile = repo.get_profile(settings.single_user_id)
         old_entry = repo.get_entry(settings.single_user_id, entry_date)
@@ -434,8 +438,9 @@ def create_app(
 
     @app.get("/weight")
     def weight() -> str:
-        end_date = today_iso()
-        start_date = (date.today() - timedelta(days=90)).isoformat()
+        end = local_date(settings.timezone)
+        end_date = end.isoformat()
+        start_date = (end - timedelta(days=90)).isoformat()
         weight_logs = repo.list_weight_logs(
             settings.single_user_id,
             start_date=start_date,
@@ -450,7 +455,7 @@ def create_app(
 
     @app.post("/weight")
     def save_weight() -> Any:
-        entry_date = request.form.get("date") or today_iso()
+        entry_date = request.form.get("date") or today_iso(settings.timezone)
         weight_text = request.form.get("weight_kg", "").strip()
         if not weight_text:
             flash(_t("enter_weight"), "error")
@@ -465,7 +470,7 @@ def create_app(
             "profile.html",
             active_page="profile",
             profile=repo.get_profile(settings.single_user_id),
-            today=today_iso(),
+            today=today_iso(settings.timezone),
         )
 
     @app.post("/profile")
@@ -482,7 +487,7 @@ def create_app(
         }
         repo.save_profile(settings.single_user_id, payload)
         if payload["weight_kg"]:
-            repo.save_weight(settings.single_user_id, today_iso(), float(payload["weight_kg"]))
+            repo.save_weight(settings.single_user_id, today_iso(settings.timezone), float(payload["weight_kg"]))
         flash(_t("profile_saved"), "success")
         return redirect(url_for("profile"))
 
@@ -502,12 +507,28 @@ def _save_uploads(files: list[FileStorage], settings: Settings) -> tuple[list[Pa
         extension = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
         if extension not in settings.allowed_upload_extensions:
             continue
+        if not _has_valid_image_signature(file, extension):
+            continue
         filename = f"{secrets.token_hex(8)}-{secure_filename(file.filename)}"
         path = settings.upload_dir / filename
         file.save(path)
         saved_paths.append(path)
         urls.append(url_for("uploaded_file", filename=filename))
     return saved_paths, urls
+
+
+def _has_valid_image_signature(file: FileStorage, extension: str) -> bool:
+    stream = file.stream
+    position = stream.tell()
+    header = stream.read(16)
+    stream.seek(position)
+    if extension in {"jpg", "jpeg"}:
+        return header.startswith(b"\xff\xd8\xff")
+    if extension == "png":
+        return header.startswith(b"\x89PNG\r\n\x1a\n")
+    if extension == "webp":
+        return header.startswith(b"RIFF") and header[8:12] == b"WEBP"
+    return False
 
 
 def _delete_uploaded_files(urls: list[str], settings: Settings) -> None:
@@ -524,6 +545,15 @@ def _delete_uploaded_files(urls: list[str], settings: Settings) -> None:
             path.unlink(missing_ok=True)
         except OSError:
             pass
+
+
+def _validate_runtime_settings(settings: Settings) -> None:
+    if settings.app_env.lower() not in {"prod", "production"}:
+        return
+    if settings.flask_secret_key == "change-me-in-prod":
+        raise RuntimeError("FLASK_SECRET_KEY must be set to a secure value in production.")
+    if not settings.app_password and not settings.app_password_hash:
+        raise RuntimeError("APP_PASSWORD_HASH or APP_PASSWORD must be set in production.")
 
 
 def _current_lang() -> str:

@@ -45,7 +45,7 @@ class Settings(BaseSettings):
 
     @property
     def gemini_model(self) -> str:
-        return str(self.app_config.get("gemini_model") or "gemini-2.5-flash")
+        return str(self.app_config.get("gemini_model") or "gemini-flash-latest")
 
     @property
     def analysis_prompt_path(self) -> Path:

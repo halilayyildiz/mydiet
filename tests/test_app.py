@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
+
+import pytest
 
 from mydiet.app import (
     _balance_summary,
@@ -315,6 +318,29 @@ def test_entry_post_deletes_old_uploaded_files(tmp_path: Path) -> None:
     assert not old_file.exists()
 
 
+def test_entry_post_rejects_upload_with_invalid_image_signature(tmp_path: Path) -> None:
+    repo = MemoryDietRepository()
+    settings = _settings()
+    settings.app_config["upload_dir"] = str(tmp_path)
+    app = create_app(settings=settings, repository=repo)
+
+    response = app.test_client().post(
+        "/entry",
+        data={
+            "date": "2026-06-13",
+            "diary_text": "fake image",
+            "images": (BytesIO(b"not really a jpg"), "fake.jpg"),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    entry = repo.get_entry("halil", "2026-06-13")
+
+    assert response.status_code == 200
+    assert entry["image_urls"] == []
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_weight_post_logs_weight_separately() -> None:
     repo = MemoryDietRepository()
     app = create_app(settings=_settings(), repository=repo)
@@ -466,6 +492,36 @@ def test_login_post_accepts_configured_password() -> None:
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/"
+
+
+def test_production_requires_secure_secret() -> None:
+    settings = Settings(
+        APP_ENV="prod",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="change-me-in-prod",
+        GEMINI_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+
+    with pytest.raises(RuntimeError, match="FLASK_SECRET_KEY"):
+        create_app(settings=settings, repository=MemoryDietRepository())
+
+
+def test_production_requires_password() -> None:
+    settings = Settings(
+        APP_ENV="prod",
+        APP_PASSWORD="",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="secure-prod-secret",
+        GEMINI_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+
+    with pytest.raises(RuntimeError, match="APP_PASSWORD_HASH"):
+        create_app(settings=settings, repository=MemoryDietRepository())
 
 
 def test_login_post_accepts_configured_password_hash() -> None:

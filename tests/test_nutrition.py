@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from mydiet.nutrition import date_window, food_item_groups, month_window, normalize_analysis
+import datetime as dt
+
+from mydiet.nutrition import date_window, food_item_groups, local_date, month_window, normalize_analysis
 
 
 def test_date_window_returns_requested_days() -> None:
@@ -16,6 +18,20 @@ def test_month_window_handles_june() -> None:
 
     assert days[0] == "2026-06-01"
     assert days[-1] == "2026-06-30"
+
+
+def test_local_date_uses_configured_timezone(monkeypatch) -> None:
+    class FrozenDatetime:
+        @classmethod
+        def now(cls, tz=None):
+            instant = dt.datetime(2026, 6, 20, 22, 30, tzinfo=dt.timezone.utc)
+            if tz is None:
+                return instant.replace(tzinfo=None)
+            return instant.astimezone(tz)
+
+    monkeypatch.setattr("mydiet.nutrition.datetime", FrozenDatetime)
+
+    assert local_date("Europe/Istanbul") == dt.date(2026, 6, 21)
 
 
 def test_normalize_analysis_casts_numbers() -> None:

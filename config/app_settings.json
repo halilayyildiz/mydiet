@@ -1,6 +1,6 @@
 {
   "default": {
-    "gemini_model": "gemini-3.5-flash",
+    "gemini_model": "gemini-flash-latest",
     "analysis_prompt_path": "config/analysis_prompt.en.txt",
     "upload_dir": "uploads",
     "allowed_upload_extensions": ["jpg", "jpeg", "png", "webp"],
