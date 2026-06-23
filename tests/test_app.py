@@ -97,8 +97,8 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     assert response.status_code == 200
     assert b"Energy balance" in response.data
     assert b'<div class="balance-result">' in response.data
-    assert b"<strong>1400</strong>" in response.data
-    assert b"<small>kcal/day</small>" in response.data
+    assert b"<strong>1.3</strong>" in response.data
+    assert b"<small>kg/week</small>" in response.data
     assert b"Eaten" in response.data
     assert b"1400 kcal" in response.data
     assert b"Burned" in response.data
@@ -132,6 +132,8 @@ def test_balance_summary_builds_bar_segments() -> None:
 
     assert summary["balance_label"] == "Deficit"
     assert summary["deficit_abs"] == 1400
+    assert summary["weekly_kg_display"] == "1.3"
+    assert summary["weekly_kg_is_loss"] is True
     assert summary["food_pct"] == 50
     assert summary["burned_pct"] == 100
     assert summary["basal"] == 1750

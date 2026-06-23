@@ -68,6 +68,7 @@ TEXTS = {
         "daily_calorie_balance": "Daily calorie balance",
         "daily_deficit_or_surplus": "Daily deficit or surplus",
         "dashboard": "Dashboard",
+        "kg_per_week": "kg/week",
         "language": "Language",
         "date": "Date",
         "days": "days",
@@ -181,6 +182,7 @@ TEXTS = {
         "goal_weight": "Hedef kilo",
         "height": "Boy",
         "high": "Yüksek",
+        "kg_per_week": "kg/hafta",
         "language": "Dil",
         "last_days": "Son {days} gün",
         "log_out": "Çıkış",
@@ -729,6 +731,7 @@ def _balance_summary(averages: dict[str, int]) -> dict[str, Any]:
     activity = max(int(averages.get("activity") or 0), 0)
     basal = max(int(averages.get("basal") or burned - activity), 0)
     deficit = int(averages.get("deficit") or burned - food)
+    weekly_kg = deficit * 7 / 7700
     max_value = max(food, burned, 1)
 
     return {
@@ -738,6 +741,10 @@ def _balance_summary(averages: dict[str, int]) -> dict[str, Any]:
         "basal": basal,
         "deficit": deficit,
         "deficit_abs": abs(deficit),
+        "weekly_kg": weekly_kg,
+        "weekly_kg_abs": abs(weekly_kg),
+        "weekly_kg_display": f"{abs(weekly_kg):.1f}",
+        "weekly_kg_is_loss": weekly_kg >= 0,
         "balance_label": "Deficit" if deficit >= 0 else "Surplus",
         "food_pct": round(food / max_value * 100),
         "burned_pct": round(burned / max_value * 100),
