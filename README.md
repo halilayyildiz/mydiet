@@ -54,6 +54,17 @@ users/{user_id}/daily_entries/{YYYY-MM-DD}
 users/{user_id}/weight_logs/{YYYY-MM-DD}
 ```
 
+## Maintenance
+
+Backfill old daily entries after changing the profile-based basal burn formula:
+
+```bash
+mydiet-backfill-bmr --user halil
+mydiet-backfill-bmr --user halil --apply
+```
+
+The first command is a dry run and does not write to Firestore.
+
 ## Deployment sketch
 
 On the GCP VM:

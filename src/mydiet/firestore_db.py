@@ -58,6 +58,22 @@ class DietRepository:
             entries.append({**(snapshot.to_dict() or {}), "id": snapshot.id})
         return entries
 
+    def list_all_entries(self, user_id: str) -> list[dict[str, Any]]:
+        entries: list[dict[str, Any]] = []
+        for snapshot in self._entries_ref(user_id).stream():
+            data = snapshot.to_dict() or {}
+            entries.append({**data, "id": snapshot.id, "date": data.get("date") or snapshot.id})
+        return sorted(entries, key=lambda entry: str(entry.get("date") or entry.get("id") or ""))
+
+    def update_entry_analysis(self, user_id: str, entry_date: str, analysis: dict[str, Any]) -> None:
+        self._entry_ref(user_id, entry_date).set(
+            {
+                "analysis": analysis,
+                "updated_at": firestore.SERVER_TIMESTAMP,
+            },
+            merge=True,
+        )
+
     def list_weight_logs(self, user_id: str, *, start_date: str, end_date: str) -> list[dict[str, Any]]:
         query = (
             self._weights_ref(user_id)
@@ -127,6 +143,17 @@ class MemoryDietRepository:
             for date_key, entry in sorted(self.entries.items())
             if start_date <= date_key <= end_date
         ]
+
+    def list_all_entries(self, user_id: str) -> list[dict[str, Any]]:
+        return [
+            {**dict(entry), "id": date_key, "date": entry.get("date") or date_key}
+            for date_key, entry in sorted(self.entries.items())
+        ]
+
+    def update_entry_analysis(self, user_id: str, entry_date: str, analysis: dict[str, Any]) -> None:
+        entry = self.entries.setdefault(entry_date, {"date": entry_date})
+        entry["analysis"] = analysis
+        entry["updated_at"] = _iso_now()
 
     def list_weight_logs(self, user_id: str, *, start_date: str, end_date: str) -> list[dict[str, Any]]:
         return [
