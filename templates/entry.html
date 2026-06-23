@@ -27,42 +27,7 @@
       </label>
       <label>
         {{ t.food_and_activity_notes }}
-        {% set default_diary_text -%}
-{% if lang == "tr" -%}
-Sabah:
-- 2 kupa kahve (yaklaşık 1/4 süt)
-
-Öğlen:
--
--
--
-
-Akşam:
--
--
--
-
-Aktivite:
--
-{%- else -%}
-Morning:
-- 2 cups of coffee (about 1/4 milk)
-
-Lunch:
--
--
--
-
-Dinner:
--
--
--
-
-Activity:
--
-{%- endif %}
-        {%- endset %}
-        <textarea name="diary_text" rows="18" placeholder="{{ t.diary_placeholder }}">{{ entry.diary_text or default_diary_text }}</textarea>
+        <textarea name="diary_text" rows="18" placeholder="{{ t.diary_placeholder }}">{{ entry.diary_text or '' }}</textarea>
       </label>
       <button type="submit" data-loading-label="{{ t.analyzing }}">{{ t.analyze_day }}</button>
     </form>

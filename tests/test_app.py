@@ -413,11 +413,11 @@ def test_entry_form_includes_loading_state() -> None:
     assert b'name="images"' not in response.data
     assert b"Photos" not in response.data
     assert b'rows="18"' in response.data
-    assert b"Morning:" in response.data
-    assert b"2 cups of coffee" in response.data
-    assert b"Lunch:" in response.data
-    assert b"Dinner:" in response.data
-    assert b"Activity:" in response.data
+    assert b"Morning:" not in response.data
+    assert b"2 cups of coffee" not in response.data
+    assert b"Lunch:" not in response.data
+    assert b"Dinner:" not in response.data
+    assert b"Activity:" not in response.data
     assert b"Log weight" not in response.data
 
 
