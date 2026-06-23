@@ -23,7 +23,6 @@
         <h2>{{ t.energy_balance }}</h2>
       </div>
       <div class="balance-result">
-        <span>{{ t.deficit if balance.deficit >= 0 else t.surplus }}</span>
         <strong>{{ balance.deficit_abs }}</strong>
         <small>kcal/day</small>
       </div>
@@ -79,9 +78,8 @@
         <p class="section-subtitle">{{ t.active_calories_by_day }}</p>
       </div>
       <div class="panel-average-stat activity">
-        <span>{{ t.daily_average }}</span>
         <strong>{{ averages.activity }}</strong>
-        <small>kcal</small>
+        <small>kcal/day</small>
       </div>
     </div>
     <div class="chart-wrap compact">
@@ -100,9 +98,8 @@
         <p class="section-subtitle">{{ t.daily_deficit_or_surplus }}</p>
       </div>
       <div class="panel-average-stat {{ 'positive' if average_deficit >= 0 else 'negative' }}">
-        <span>{{ t.daily_average }}</span>
         <strong>{{ average_deficit if average_deficit >= 0 else -average_deficit }}</strong>
-        <small>kcal</small>
+        <small>kcal/day</small>
       </div>
     </div>
     <div class="chart-wrap compact">

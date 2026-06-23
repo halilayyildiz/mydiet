@@ -95,6 +95,9 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
 
     assert response.status_code == 200
     assert b"Energy balance" in response.data
+    assert b'<div class="balance-result">' in response.data
+    assert b"<strong>1400</strong>" in response.data
+    assert b"<small>kcal/day</small>" in response.data
     assert b"Eaten" in response.data
     assert b"1400 kcal" in response.data
     assert b"Burned" in response.data
@@ -105,13 +108,12 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     assert b'<div id="calorieChart" class="svg-chart"' in response.data
     assert b"Activity trend" in response.data
     assert b'class="panel-average-stat activity"' in response.data
-    assert b"<span>Daily average</span>" in response.data
     assert b"<strong>700</strong>" in response.data
     assert b'<div id="activityChart" class="svg-chart"' in response.data
     assert b"Calorie deficit trend" in response.data
     assert b'class="panel-average-stat positive"' in response.data
     assert b"<strong>1400</strong>" in response.data
-    assert b"<small>kcal</small>" in response.data
+    assert b"<small>kcal/day</small>" in response.data
     assert b'<div id="deficitChart" class="svg-chart"' in response.data
     assert b"Update weight" in response.data
 
@@ -162,9 +164,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260623-9" in response.data
-    assert b"/static/charts.js?v=20260623-9" in response.data
-    assert b"/static/dashboard.js?v=20260623-9" in response.data
+    assert b"/static/styles.css?v=20260623-14" in response.data
+    assert b"/static/charts.js?v=20260623-14" in response.data
+    assert b"/static/dashboard.js?v=20260623-14" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -402,7 +404,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260623-9" in response.data
+    assert b"/static/forms.js?v=20260623-14" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data

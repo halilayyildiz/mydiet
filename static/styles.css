@@ -342,7 +342,7 @@ h2 {
 .balance-result small {
   color: var(--muted);
   display: block;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -493,9 +493,8 @@ h2 {
   text-transform: uppercase;
 }
 
-.panel-average-stat span,
 .panel-average-stat small {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 900;
   line-height: 1;
 }
@@ -1232,17 +1231,18 @@ h2 {
     align-items: end;
     border-left: 0;
     border-top: 1px solid var(--line);
-    display: flex;
-    gap: 8px;
-    justify-content: space-between;
+    display: grid;
+    gap: 0;
+    justify-content: end;
     min-width: 0;
     padding-left: 0;
     padding-top: 12px;
-    text-align: left;
+    text-align: right;
   }
 
   .balance-result strong {
-    margin: 0;
+    margin: 5px 0 2px;
+    white-space: nowrap;
   }
 
   .calendar-day {
@@ -1295,9 +1295,8 @@ h2 {
     font-size: 32px;
   }
 
-  .panel-average-stat span,
   .panel-average-stat small {
-    font-size: 12px;
+    font-size: 10px;
   }
 
   .balance-card {
