@@ -1190,6 +1190,28 @@ h2 {
   font-size: 24px;
 }
 
+.login-flash-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.login-flash-stack .flash {
+  margin-bottom: 0;
+}
+
+.auth-switch {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
+.auth-switch a {
+  color: var(--green);
+  text-decoration: none;
+}
+
 @media (max-width: 820px) {
   .site-header {
     grid-template-columns: minmax(0, auto) 1fr auto auto;

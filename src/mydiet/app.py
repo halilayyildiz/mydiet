@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import secrets
 from datetime import timedelta
 from pathlib import Path
@@ -17,7 +18,7 @@ from flask import (
     url_for,
 )
 from werkzeug.datastructures import FileStorage
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from mydiet.firestore_db import DietRepository, MemoryDietRepository
@@ -37,7 +38,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20260623-16"
+ASSET_VERSION = "20260623-17"
 
 TEXTS = {
     "en": {
@@ -110,6 +111,9 @@ TEXTS = {
         "open_menu": "Open navigation menu",
         "other": "Other",
         "password": "Password",
+        "register": "Register",
+        "create_account": "Create account",
+        "have_account": "Already have an account?",
         "personal_dashboard": "Personal dashboard",
         "personal_settings": "Personal settings",
         "previous_month": "Previous month",
@@ -132,6 +136,11 @@ TEXTS = {
         "incorrect_password": "Incorrect password.",
         "username": "Username",
         "profile_saved": "Profile saved.",
+        "user_already_exists": "That username already exists.",
+        "user_created": "Account created. You can log in now.",
+        "invalid_username": "Use 3-32 letters, numbers, dashes, or underscores.",
+        "invalid_password": "Password is required.",
+        "complete_profile_first": "Complete your profile before using the app.",
         "weight_logged": "Weight logged.",
     },
     "tr": {
@@ -204,6 +213,9 @@ TEXTS = {
         "open_menu": "Navigasyon menüsünü aç",
         "other": "Diğer",
         "password": "Şifre",
+        "register": "Kayıt ol",
+        "create_account": "Hesap oluştur",
+        "have_account": "Zaten hesabın var mı?",
         "personal_dashboard": "Kişisel dashboard",
         "personal_settings": "Kişisel ayarlar",
         "previous_month": "Önceki ay",
@@ -226,6 +238,11 @@ TEXTS = {
         "incorrect_password": "Kullanıcı adı veya şifre yanlış.",
         "username": "Kullanıcı adı",
         "profile_saved": "Profil kaydedildi.",
+        "user_already_exists": "Bu kullanıcı adı zaten var.",
+        "user_created": "Hesap oluşturuldu. Şimdi giriş yapabilirsin.",
+        "invalid_username": "3-32 harf, rakam, tire veya alt çizgi kullan.",
+        "invalid_password": "Şifre zorunlu.",
+        "complete_profile_first": "Uygulamayı kullanmadan önce profilini tamamla.",
         "weight_logged": "Kilo kaydedildi.",
     },
 }
@@ -282,26 +299,45 @@ def create_app(
             "chart_text": chart_text,
             "lang": lang,
             "t": text,
-            "username": settings.single_user_id,
+            "username": _current_user_id(settings),
         }
 
     @app.before_request
     def load_preferred_language() -> None:
         if session.get("lang") in TEXTS or request.endpoint in {"static", "uploaded_file"}:
             return
-        profile = _profile_with_bmr(repo.get_profile(settings.single_user_id))
+        if not session.get("user_id"):
+            if not settings.use_memory_repository or settings.app_password or settings.app_password_hash:
+                return
+            session["authenticated"] = True
+            session["user_id"] = settings.single_user_id
+        profile = _profile_with_bmr(repo.get_profile(_current_user_id(settings)))
         preferred_language = str(profile.get("preferred_language") or "")
         if preferred_language in TEXTS:
             session["lang"] = preferred_language
 
     @app.before_request
     def require_login() -> Any:
-        if not settings.app_password and not settings.app_password_hash:
+        if settings.use_memory_repository and not settings.app_password and not settings.app_password_hash:
             session["authenticated"] = True
-        if request.endpoint in {"login", "login_post", "set_language", "static", "uploaded_file"}:
+            session.setdefault("user_id", _current_user_id(settings))
+        if request.endpoint in {
+            "login",
+            "login_post",
+            "register",
+            "register_post",
+            "set_language",
+            "static",
+            "uploaded_file",
+        }:
             return None
         if not session.get("authenticated"):
             return redirect(url_for("login", next=request.full_path))
+        if request.endpoint not in {"profile", "save_profile", "logout", "set_language"}:
+            profile = repo.get_profile(_current_user_id(settings))
+            if _profile_required(settings, profile) and not _profile_is_complete(profile):
+                flash(_t("complete_profile_first"), "error")
+                return redirect(url_for("profile"))
         return None
 
     @app.post("/language")
@@ -309,7 +345,8 @@ def create_app(
         lang = request.form.get("lang", "en")
         selected_lang = lang if lang in TEXTS else "en"
         session["lang"] = selected_lang
-        repo.save_profile(settings.single_user_id, {"preferred_language": selected_lang})
+        if session.get("authenticated"):
+            repo.save_profile(_current_user_id(settings), {"preferred_language": selected_lang})
         next_url = request.form.get("next") or url_for("dashboard")
         if not next_url.startswith("/"):
             next_url = url_for("dashboard")
@@ -321,12 +358,48 @@ def create_app(
 
     @app.post("/login")
     def login_post() -> Any:
-        username = request.form.get("username", "").strip()
+        username = _normalize_user_id(request.form.get("username", ""))
         password = request.form.get("password", "")
-        if username == settings.single_user_id and _password_matches(settings, password):
+        profile = repo.get_profile(username) if username else {}
+        if _user_password_matches(settings, username, profile, password):
             session["authenticated"] = True
+            session["user_id"] = username
+            preferred_language = str(profile.get("preferred_language") or "")
+            if preferred_language in TEXTS:
+                session["lang"] = preferred_language
+            if _profile_required(settings, profile) and not _profile_is_complete(profile):
+                flash(_t("complete_profile_first"), "error")
+                return redirect(url_for("profile"))
             return redirect(request.args.get("next") or url_for("dashboard"))
         flash(_t("incorrect_password"), "error")
+        return redirect(url_for("login"))
+
+    @app.get("/register")
+    def register() -> str:
+        return render_template("register.html")
+
+    @app.post("/register")
+    def register_post() -> Any:
+        username = _normalize_user_id(request.form.get("username", ""))
+        password = request.form.get("password", "")
+        if not _valid_user_id(username):
+            flash(_t("invalid_username"), "error")
+            return redirect(url_for("register"))
+        if not password:
+            flash(_t("invalid_password"), "error")
+            return redirect(url_for("register"))
+        if repo.get_profile(username):
+            flash(_t("user_already_exists"), "error")
+            return redirect(url_for("register"))
+        repo.save_profile(
+            username,
+            {
+                "username": username,
+                "password_hash": generate_password_hash(password),
+                "preferred_language": _current_lang(),
+            },
+        )
+        flash(_t("user_created"), "success")
         return redirect(url_for("login"))
 
     @app.post("/logout")
@@ -343,16 +416,16 @@ def create_app(
         days = RANGE_OPTIONS.get(range_key, 14)
         today = today_iso(settings.timezone)
         dates = date_window(days, timezone_name=settings.timezone)
-        entries = repo.list_entries(settings.single_user_id, start_date=dates[0], end_date=dates[-1])
+        entries = repo.list_entries(_current_user_id(settings), start_date=dates[0], end_date=dates[-1])
         weights = repo.list_weight_logs(
-            settings.single_user_id,
+            _current_user_id(settings),
             start_date=dates[0],
             end_date=dates[-1],
         )
         month = request.args.get("month") or today[:7]
         month_dates = month_window(month, timezone_name=settings.timezone)
         month_entries = repo.list_entries(
-            settings.single_user_id,
+            _current_user_id(settings),
             start_date=month_dates[0],
             end_date=month_dates[-1],
         )
@@ -380,7 +453,7 @@ def create_app(
     def entry_form() -> str:
         today = today_iso(settings.timezone)
         entry_date = request.args.get("date") or today
-        entry = repo.get_entry(settings.single_user_id, entry_date)
+        entry = repo.get_entry(_current_user_id(settings), entry_date)
         return render_template(
             "entry.html",
             active_page="entry",
@@ -394,8 +467,8 @@ def create_app(
     def save_entry() -> Any:
         entry_date = request.form.get("date") or today_iso(settings.timezone)
         diary_text = request.form.get("diary_text", "").strip()
-        profile = repo.get_profile(settings.single_user_id)
-        old_entry = repo.get_entry(settings.single_user_id, entry_date)
+        profile = repo.get_profile(_current_user_id(settings))
+        old_entry = repo.get_entry(_current_user_id(settings), entry_date)
         image_paths, image_urls = _save_uploads(request.files.getlist("images"), settings)
         language = _current_lang()
 
@@ -427,7 +500,7 @@ def create_app(
             analysis = fallback_analysis(diary_text, profile, reason=reason, language=language)
 
         repo.save_entry(
-            settings.single_user_id,
+            _current_user_id(settings),
             entry_date,
             {
                 "diary_text": diary_text,
@@ -445,12 +518,12 @@ def create_app(
         end_date = end.isoformat()
         start_date = (end - timedelta(days=90)).isoformat()
         weight_logs = repo.list_weight_logs(
-            settings.single_user_id,
+            _current_user_id(settings),
             start_date=start_date,
             end_date=end_date,
         )
         recent_weight_logs = list(reversed(weight_logs))
-        profile = repo.get_profile(settings.single_user_id)
+        profile = repo.get_profile(_current_user_id(settings))
         current_weight = (
             recent_weight_logs[0].get("weight_kg")
             if recent_weight_logs
@@ -472,11 +545,11 @@ def create_app(
             flash(_t("enter_weight"), "error")
             return redirect(url_for("weight"))
         weight_kg = _required_float(weight_text)
-        profile = repo.get_profile(settings.single_user_id)
+        profile = repo.get_profile(_current_user_id(settings))
         profile["weight_kg"] = weight_kg
-        repo.save_weight(settings.single_user_id, entry_date, weight_kg)
+        repo.save_weight(_current_user_id(settings), entry_date, weight_kg)
         repo.save_profile(
-            settings.single_user_id,
+            _current_user_id(settings),
             {"bmr_calories": compute_bmr_calories(profile, use_stored=False)},
         )
         flash(_t("weight_logged"), "success")
@@ -487,7 +560,7 @@ def create_app(
         return render_template(
             "profile.html",
             active_page="profile",
-            profile=repo.get_profile(settings.single_user_id),
+            profile=repo.get_profile(_current_user_id(settings)),
             today=today_iso(settings.timezone),
         )
 
@@ -504,11 +577,15 @@ def create_app(
             "goal": request.form.get("goal", "fat_loss"),
         }
         payload["bmr_calories"] = compute_bmr_calories(payload, use_stored=False)
-        repo.save_profile(settings.single_user_id, payload)
+        payload["profile_complete"] = _profile_is_complete(payload)
+        repo.save_profile(_current_user_id(settings), payload)
         if payload["weight_kg"]:
-            repo.save_weight(settings.single_user_id, today_iso(settings.timezone), float(payload["weight_kg"]))
+            repo.save_weight(_current_user_id(settings), today_iso(settings.timezone), float(payload["weight_kg"]))
+        if not payload["profile_complete"]:
+            flash(_t("complete_profile_first"), "error")
+            return redirect(url_for("profile"))
         flash(_t("profile_saved"), "success")
-        return redirect(url_for("profile"))
+        return redirect(url_for("dashboard"))
 
     @app.get("/uploads/<path:filename>")
     def uploaded_file(filename: str) -> Any:
@@ -571,8 +648,6 @@ def _validate_runtime_settings(settings: Settings) -> None:
         return
     if settings.flask_secret_key == "change-me-in-prod":
         raise RuntimeError("FLASK_SECRET_KEY must be set to a secure value in production.")
-    if not settings.app_password and not settings.app_password_hash:
-        raise RuntimeError("APP_PASSWORD_HASH or APP_PASSWORD must be set in production.")
 
 
 def _current_lang() -> str:
@@ -583,6 +658,47 @@ def _current_lang() -> str:
 def _t(key: str) -> str:
     lang = _current_lang()
     return TEXTS[lang].get(key, TEXTS["en"].get(key, key))
+
+
+def _current_user_id(settings: Settings) -> str:
+    return str(session.get("user_id") or settings.single_user_id)
+
+
+def _normalize_user_id(value: str) -> str:
+    return value.strip().lower()
+
+
+def _valid_user_id(value: str) -> bool:
+    return bool(re.fullmatch(r"[a-z0-9_-]{3,32}", value))
+
+
+def _user_password_matches(
+    settings: Settings,
+    username: str,
+    profile: dict[str, Any],
+    password: str,
+) -> bool:
+    password_hash = str(profile.get("password_hash") or "")
+    if password_hash:
+        return check_password_hash(password_hash, password)
+    return username == settings.single_user_id and _password_matches(settings, password)
+
+
+def _profile_required(settings: Settings, profile: dict[str, Any]) -> bool:
+    return bool(profile.get("password_hash") or settings.app_password or settings.app_password_hash)
+
+
+def _profile_is_complete(profile: dict[str, Any]) -> bool:
+    return all(
+        [
+            profile.get("age"),
+            profile.get("gender"),
+            profile.get("height_cm"),
+            profile.get("weight_kg"),
+            profile.get("activity_level"),
+            profile.get("goal"),
+        ]
+    )
 
 
 def _trend_series(dates: list[str], entries: list[dict[str, Any]]) -> list[dict[str, Any]]:

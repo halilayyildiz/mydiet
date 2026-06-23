@@ -25,11 +25,11 @@
     </label>
     <label>
       {{ t.age }}
-      <input type="number" name="age" value="{{ profile.age or '' }}" min="1" max="120">
+      <input type="number" name="age" value="{{ profile.age or '' }}" min="1" max="120" required>
     </label>
     <label>
       {{ t.gender }}
-      <select name="gender">
+      <select name="gender" required>
         {% for value, label in [('male', t.male), ('female', t.female), ('other', t.other)] %}
           <option value="{{ value }}" {{ 'selected' if profile.gender == value else '' }}>{{ label }}</option>
         {% endfor %}
@@ -37,12 +37,12 @@
     </label>
     <label>
       {{ t.height }}
-      <input type="number" name="height_cm" value="{{ profile.height_cm or '' }}" min="80" max="240">
+      <input type="number" name="height_cm" value="{{ profile.height_cm or '' }}" min="80" max="240" required>
       <span>cm</span>
     </label>
     <label>
       {{ t.current_weight }}
-      <input type="text" name="weight_kg" value="{{ profile.weight_kg or '' }}" inputmode="decimal" pattern="[0-9]+([\.,][0-9]+)?">
+      <input type="text" name="weight_kg" value="{{ profile.weight_kg or '' }}" inputmode="decimal" pattern="[0-9]+([\.,][0-9]+)?" required>
       <span>kg</span>
     </label>
     <label>
@@ -52,7 +52,7 @@
     </label>
     <label>
       {{ t.activity_level }}
-      <select name="activity_level">
+      <select name="activity_level" required>
         {% for value, label in [('low', t.low), ('moderate', t.moderate), ('high', t.high)] %}
           <option value="{{ value }}" {{ 'selected' if profile.activity_level == value else '' }}>{{ label }}</option>
         {% endfor %}
@@ -60,7 +60,7 @@
     </label>
     <label>
       {{ t.goal }}
-      <select name="goal">
+      <select name="goal" required>
         {% for value, label in [('fat_loss', t.fat_loss), ('maintenance', t.maintenance), ('muscle_gain', t.muscle_gain)] %}
           <option value="{{ value }}" {{ 'selected' if profile.goal == value else '' }}>{{ label }}</option>
         {% endfor %}

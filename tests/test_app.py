@@ -168,9 +168,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260623-16" in response.data
-    assert b"/static/charts.js?v=20260623-16" in response.data
-    assert b"/static/dashboard.js?v=20260623-16" in response.data
+    assert b"/static/styles.css?v=20260623-17" in response.data
+    assert b"/static/charts.js?v=20260623-17" in response.data
+    assert b"/static/dashboard.js?v=20260623-17" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -412,7 +412,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260623-16" in response.data
+    assert b"/static/forms.js?v=20260623-17" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -548,7 +548,7 @@ def test_login_post_accepts_configured_password() -> None:
     response = app.test_client().post("/login", data={"username": "halil", "password": "secret"})
 
     assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/profile"
 
 
 def test_production_requires_secure_secret() -> None:
@@ -566,7 +566,7 @@ def test_production_requires_secure_secret() -> None:
         create_app(settings=settings, repository=MemoryDietRepository())
 
 
-def test_production_requires_password() -> None:
+def test_production_allows_profile_passwords_without_global_password() -> None:
     settings = Settings(
         APP_ENV="prod",
         APP_PASSWORD="",
@@ -577,8 +577,9 @@ def test_production_requires_password() -> None:
         USE_MEMORY_REPOSITORY=True,
     )
 
-    with pytest.raises(RuntimeError, match="APP_PASSWORD_HASH"):
-        create_app(settings=settings, repository=MemoryDietRepository())
+    app = create_app(settings=settings, repository=MemoryDietRepository())
+
+    assert app.config["SECRET_KEY"] == "secure-prod-secret"
 
 
 def test_login_post_accepts_configured_password_hash() -> None:
@@ -596,7 +597,7 @@ def test_login_post_accepts_configured_password_hash() -> None:
     response = app.test_client().post("/login", data={"username": "halil", "password": "secret"})
 
     assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/profile"
 
 
 def test_login_post_rejects_wrong_username() -> None:
@@ -635,6 +636,152 @@ def test_login_form_includes_username_field() -> None:
     assert b'name="username"' in response.data
     assert b'value="halil"' in response.data
     assert b'autocomplete="username"' in response.data
+    assert b'href="/register"' in response.data
+
+
+def test_register_creates_user_and_allows_login() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        GEMINI_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    repo = MemoryDietRepository()
+    app = create_app(settings=settings, repository=repo)
+    client = app.test_client()
+
+    response = client.post(
+        "/register",
+        data={"username": "Deniz_01", "password": "secret2"},
+        follow_redirects=True,
+    )
+    profile = repo.get_profile("deniz_01")
+
+    assert response.status_code == 200
+    assert b"Account created" in response.data
+    assert profile["username"] == "deniz_01"
+    assert "password_hash" in profile
+
+    response = client.post(
+        "/login",
+        data={"username": "deniz_01", "password": "secret2"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"<span>deniz_01</span>" in response.data
+    assert b"Complete your profile before using the app." in response.data
+    assert b"Profile" in response.data
+
+
+def test_new_user_cannot_use_app_until_profile_is_complete() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        GEMINI_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    repo = MemoryDietRepository()
+    repo.save_profile("deniz", {"password_hash": generate_password_hash("secret2")})
+    app = create_app(settings=settings, repository=repo)
+    client = app.test_client()
+
+    client.post("/login", data={"username": "deniz", "password": "secret2"})
+    response = client.get("/")
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/profile"
+
+    response = client.post(
+        "/profile",
+        data={
+            "name": "Deniz",
+            "age": "30",
+            "gender": "male",
+            "height_cm": "180",
+            "weight_kg": "82.4",
+            "goal_weight_kg": "78",
+            "activity_level": "low",
+            "goal": "fat_loss",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/"
+    assert repo.get_profile("deniz")["profile_complete"] is True
+
+
+def test_registered_users_do_not_share_entries() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        GEMINI_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    repo = MemoryDietRepository()
+    repo.save_profile(
+        "deniz",
+        {
+            "password_hash": generate_password_hash("secret2"),
+            "age": 30,
+            "gender": "male",
+            "height_cm": 180,
+            "weight_kg": 82.4,
+            "activity_level": "low",
+            "goal": "fat_loss",
+            "profile_complete": True,
+        },
+    )
+    repo.save_entry(
+        "halil",
+        "2026-06-13",
+        {
+            "diary_text": "halil day",
+            "image_urls": [],
+            "analysis": {"food_calories": 999, "burned_calories": 2000, "calorie_deficit": 1001},
+        },
+    )
+    app = create_app(settings=settings, repository=repo)
+    client = app.test_client()
+
+    client.post("/login", data={"username": "deniz", "password": "secret2"})
+    response = client.get("/?range=14d")
+
+    assert response.status_code == 200
+    assert b"999 kcal" not in response.data
+
+
+def test_register_rejects_duplicate_username() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        GEMINI_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    repo = MemoryDietRepository()
+    repo.save_profile("deniz", {"password_hash": generate_password_hash("secret2")})
+    app = create_app(settings=settings, repository=repo)
+
+    response = app.test_client().post(
+        "/register",
+        data={"username": "deniz", "password": "secret3"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"already exists" in response.data
 
 
 def _settings() -> Settings:

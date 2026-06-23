@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>MyDiet Login</title>
+    <title>MyDiet Register</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>
   <body class="login-body">
@@ -24,16 +24,16 @@
       <form method="post" class="stack-form">
         <label>
           {{ t.username }}
-          <input name="username" value="{{ username }}" autocomplete="username" required autofocus>
+          <input name="username" value="{{ request.form.username or '' }}" autocomplete="username" required autofocus>
         </label>
         <label>
           {{ t.password }}
-          <input name="password" type="password" autocomplete="current-password" required>
+          <input name="password" type="password" autocomplete="new-password" required>
         </label>
-        <button type="submit">{{ t.enter }}</button>
+        <button type="submit">{{ t.create_account }}</button>
       </form>
       <p class="auth-switch">
-        <a href="{{ url_for('register') }}">{{ t.register }}</a>
+        {{ t.have_account }} <a href="{{ url_for('login') }}">{{ t.enter }}</a>
       </p>
     </main>
   </body>
