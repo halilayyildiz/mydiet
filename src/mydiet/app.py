@@ -36,7 +36,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20260620-2"
+ASSET_VERSION = "20260623-9"
 
 TEXTS = {
     "en": {
@@ -446,11 +446,19 @@ def create_app(
             start_date=start_date,
             end_date=end_date,
         )
+        recent_weight_logs = list(reversed(weight_logs))
+        profile = repo.get_profile(settings.single_user_id)
+        current_weight = (
+            recent_weight_logs[0].get("weight_kg")
+            if recent_weight_logs
+            else profile.get("weight_kg")
+        )
         return render_template(
             "weight.html",
             active_page="weight",
             today=end_date,
-            weight_logs=list(reversed(weight_logs)),
+            current_weight=current_weight,
+            weight_logs=recent_weight_logs,
         )
 
     @app.post("/weight")
@@ -460,7 +468,7 @@ def create_app(
         if not weight_text:
             flash(_t("enter_weight"), "error")
             return redirect(url_for("weight"))
-        repo.save_weight(settings.single_user_id, entry_date, float(weight_text))
+        repo.save_weight(settings.single_user_id, entry_date, _required_float(weight_text))
         flash(_t("weight_logged"), "success")
         return redirect(url_for("weight"))
 
@@ -736,7 +744,11 @@ def _optional_int(value: str | None) -> int | None:
 def _optional_float(value: str | None) -> float | None:
     if not value:
         return None
-    return float(value)
+    return _required_float(value)
+
+
+def _required_float(value: str) -> float:
+    return float(value.strip().replace(",", "."))
 
 
 def _password_matches(settings: Settings, password: str) -> bool:

@@ -476,6 +476,55 @@ h2 {
   min-width: 0;
 }
 
+.section-heading.with-stat {
+  align-items: stretch;
+}
+
+.panel-average-stat {
+  align-items: flex-end;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: end;
+  min-width: 142px;
+  padding-left: 18px;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.panel-average-stat span,
+.panel-average-stat small {
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.panel-average-stat small {
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.panel-average-stat strong {
+  color: var(--green);
+  font-size: 32px;
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 5px 0 2px;
+}
+
+.panel-average-stat.activity strong {
+  color: var(--blue);
+}
+
+.panel-average-stat.positive strong {
+  color: var(--green);
+}
+
+.panel-average-stat.negative strong {
+  color: var(--red);
+}
+
 .section-subtitle {
   color: var(--muted);
   font-size: 13px;
@@ -889,6 +938,33 @@ h2 {
   resize: vertical;
 }
 
+.weight-stepper {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 58px minmax(0, 1fr) 58px;
+}
+
+.weight-stepper button {
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  display: inline-flex;
+  font-size: 24px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 54px;
+  padding: 0;
+}
+
+.weight-stepper input {
+  font-size: 22px;
+  font-weight: 900;
+  min-height: 54px;
+  text-align: center;
+}
+
 .stack-form button,
 .weight-log-panel button,
 .profile-grid button {
@@ -896,6 +972,13 @@ h2 {
   border-color: var(--green);
   color: white;
   min-height: 50px;
+}
+
+.weight-log-panel .weight-stepper button {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--ink);
+  min-height: 54px;
 }
 
 .stack-form button:disabled,
@@ -1119,6 +1202,16 @@ h2 {
     flex-direction: column;
   }
 
+  .section-heading.with-stat {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .panel-average-stat {
+    min-width: 120px;
+    padding-left: 14px;
+  }
+
   .metric-grid,
   .form-layout,
   .weight-layout,
@@ -1196,6 +1289,15 @@ h2 {
 
   .metric strong {
     font-size: 26px;
+  }
+
+  .panel-average-stat strong {
+    font-size: 32px;
+  }
+
+  .panel-average-stat span,
+  .panel-average-stat small {
+    font-size: 12px;
   }
 
   .balance-card {

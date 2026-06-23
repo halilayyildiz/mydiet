@@ -123,7 +123,7 @@
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
     const baseY = height - pad.bottom;
-    const ticks = [niceMax, Math.round(niceMax / 2), 0];
+    const ticks = Array.from({ length: niceMax / 500 + 1 }, (_, index) => index * 500).reverse();
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
     const grid = ticks
@@ -229,13 +229,13 @@
 
     const values = plotRows.map((row) => Number(row.activity || 0));
     const maxValue = Math.max(...values, 100);
-    const niceMax = Math.ceil(maxValue / 100) * 100;
+    const niceMax = Math.ceil(maxValue / 200) * 200;
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
     const baseY = height - pad.bottom;
     const slot = chartWidth / Math.max(rows.length, 1);
     const barWidth = Math.max(8, Math.min(24, slot * 0.52));
-    const ticks = [niceMax, Math.round(niceMax / 2), 0];
+    const ticks = Array.from({ length: niceMax / 200 + 1 }, (_, index) => index * 200).reverse();
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
     const grid = ticks

@@ -27,7 +27,19 @@
       </label>
       <label>
         {{ t.weight }}
-        <input type="number" name="weight_kg" inputmode="decimal" step="0.1" min="20" max="300" placeholder="82.4" required>
+        <div class="weight-stepper" data-weight-stepper>
+          <button type="button" data-weight-step="-0.1" aria-label="-0.1 kg">−</button>
+          <input
+            type="text"
+            name="weight_kg"
+            inputmode="decimal"
+            pattern="[0-9]+([\.,][0-9]+)?"
+            value="{{ current_weight or '' }}"
+            placeholder="82.4"
+            required
+          >
+          <button type="button" data-weight-step="0.1" aria-label="+0.1 kg">+</button>
+        </div>
       </label>
       <button type="submit" data-loading-label="{{ t.logging }}">{{ t.log_weight }}</button>
     </form>

@@ -104,8 +104,14 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     assert b"recorded days" in response.data
     assert b'<div id="calorieChart" class="svg-chart"' in response.data
     assert b"Activity trend" in response.data
+    assert b'class="panel-average-stat activity"' in response.data
+    assert b"<span>Daily average</span>" in response.data
+    assert b"<strong>700</strong>" in response.data
     assert b'<div id="activityChart" class="svg-chart"' in response.data
     assert b"Calorie deficit trend" in response.data
+    assert b'class="panel-average-stat positive"' in response.data
+    assert b"<strong>1400</strong>" in response.data
+    assert b"<small>kcal</small>" in response.data
     assert b'<div id="deficitChart" class="svg-chart"' in response.data
     assert b"Update weight" in response.data
 
@@ -156,9 +162,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260620-2" in response.data
-    assert b"/static/charts.js?v=20260620-2" in response.data
-    assert b"/static/dashboard.js?v=20260620-2" in response.data
+    assert b"/static/styles.css?v=20260623-9" in response.data
+    assert b"/static/charts.js?v=20260623-9" in response.data
+    assert b"/static/dashboard.js?v=20260623-9" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -347,7 +353,7 @@ def test_weight_post_logs_weight_separately() -> None:
 
     response = app.test_client().post(
         "/weight",
-        data={"date": "2026-06-13", "weight_kg": "82.4"},
+        data={"date": "2026-06-13", "weight_kg": "82,4"},
         follow_redirects=True,
     )
 
@@ -370,8 +376,24 @@ def test_weight_page_renders_log_form_and_recent_weights() -> None:
     assert response.status_code == 200
     assert b"Weight log" in response.data
     assert b"Log weight" in response.data
+    assert b'data-weight-step="-0.1"' in response.data
+    assert b'data-weight-step="0.1"' in response.data
+    assert b'name="weight_kg"' in response.data
+    assert b'inputmode="decimal"' in response.data
+    assert b'value="82.4"' in response.data
     assert b"82.4 kg" in response.data
     assert b"data-loading-form" in response.data
+
+
+def test_weight_page_prefills_profile_weight_when_no_logs() -> None:
+    repo = MemoryDietRepository()
+    repo.save_profile("halil", {"weight_kg": 83.1})
+    app = create_app(settings=_settings(), repository=repo)
+
+    response = app.test_client().get("/weight")
+
+    assert response.status_code == 200
+    assert b'value="83.1"' in response.data
 
 
 def test_entry_form_includes_loading_state() -> None:
@@ -380,7 +402,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260620-2" in response.data
+    assert b"/static/forms.js?v=20260623-9" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -473,6 +495,8 @@ def test_profile_form_includes_loading_state() -> None:
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
+    assert b'type="text" name="weight_kg"' in response.data
+    assert b'type="text" name="goal_weight_kg"' in response.data
     assert b"Saving..." in response.data
 
 

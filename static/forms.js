@@ -60,6 +60,19 @@
   });
 
   document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-weight-step]");
+    if (!button) return;
+    const stepper = button.closest("[data-weight-stepper]");
+    const input = stepper?.querySelector('input[name="weight_kg"]');
+    if (!input) return;
+    const current = Number.parseFloat(input.value.replace(",", "."));
+    const step = Number.parseFloat(button.dataset.weightStep || "0");
+    const next = (Number.isFinite(current) ? current : 0) + step;
+    input.value = Math.max(next, 0).toFixed(1);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  document.addEventListener("click", (event) => {
     document.querySelectorAll(".header-menu[open]").forEach((menu) => {
       if (!menu.contains(event.target)) {
         menu.open = false;

@@ -73,10 +73,15 @@
   </section>
 
   <section class="chart-section">
-    <div class="section-heading">
+    <div class="section-heading with-stat">
       <div>
         <h2>{{ t.activity_trend }}</h2>
         <p class="section-subtitle">{{ t.active_calories_by_day }}</p>
+      </div>
+      <div class="panel-average-stat activity">
+        <span>{{ t.daily_average }}</span>
+        <strong>{{ averages.activity }}</strong>
+        <small>kcal</small>
       </div>
     </div>
     <div class="chart-wrap compact">
@@ -88,10 +93,16 @@
   </section>
 
   <section class="chart-section">
-    <div class="section-heading">
+    {% set average_deficit = averages.deficit or 0 %}
+    <div class="section-heading with-stat">
       <div>
         <h2>{{ t.calorie_deficit_trend }}</h2>
         <p class="section-subtitle">{{ t.daily_deficit_or_surplus }}</p>
+      </div>
+      <div class="panel-average-stat {{ 'positive' if average_deficit >= 0 else 'negative' }}">
+        <span>{{ t.daily_average }}</span>
+        <strong>{{ average_deficit if average_deficit >= 0 else -average_deficit }}</strong>
+        <small>kcal</small>
       </div>
     </div>
     <div class="chart-wrap compact">
