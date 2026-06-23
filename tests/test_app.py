@@ -83,6 +83,7 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
             "image_urls": [],
             "analysis": {
                 "food_calories": 1400,
+                "bmr_calories": 1750,
                 "burned_calories": 2800,
                 "activity_calories": 700,
                 "calorie_deficit": 1400,
@@ -101,7 +102,7 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     assert b"Eaten" in response.data
     assert b"1400 kcal" in response.data
     assert b"Burned" in response.data
-    assert b"Basal 2100 kcal" in response.data
+    assert b"Basal 1750 kcal" in response.data
     assert b"Activity 700 kcal" in response.data
     assert b"Deficit" in response.data
     assert b"recorded days" in response.data
@@ -122,6 +123,7 @@ def test_balance_summary_builds_bar_segments() -> None:
     summary = _balance_summary(
         {
             "food": 1400,
+            "basal": 1750,
             "burned": 2800,
             "activity": 700,
             "deficit": 1400,
@@ -132,8 +134,8 @@ def test_balance_summary_builds_bar_segments() -> None:
     assert summary["deficit_abs"] == 1400
     assert summary["food_pct"] == 50
     assert summary["burned_pct"] == 100
-    assert summary["basal"] == 2100
-    assert summary["basal_pct"] == 75
+    assert summary["basal"] == 1750
+    assert summary["basal_pct"] == 62
     assert summary["activity_pct"] == 25
 
 
@@ -164,9 +166,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260623-15" in response.data
-    assert b"/static/charts.js?v=20260623-15" in response.data
-    assert b"/static/dashboard.js?v=20260623-15" in response.data
+    assert b"/static/styles.css?v=20260623-16" in response.data
+    assert b"/static/charts.js?v=20260623-16" in response.data
+    assert b"/static/dashboard.js?v=20260623-16" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -202,6 +204,7 @@ def test_trend_series_marks_empty_days_without_zero_values() -> None:
                 "date": "2026-06-13",
                 "analysis": {
                     "food_calories": 1400,
+                    "bmr_calories": 1700,
                     "burned_calories": 2600,
                     "activity_calories": 400,
                     "calorie_deficit": 1200,
@@ -213,6 +216,7 @@ def test_trend_series_marks_empty_days_without_zero_values() -> None:
     assert series[0] == {"date": "2026-06-12", "has_data": False}
     assert series[1]["has_data"] is True
     assert series[1]["food"] == 1400
+    assert series[1]["basal"] == 1700
 
 
 def test_weight_series_uses_full_selected_date_window() -> None:
@@ -351,6 +355,7 @@ def test_entry_post_rejects_upload_with_invalid_image_signature(tmp_path: Path) 
 
 def test_weight_post_logs_weight_separately() -> None:
     repo = MemoryDietRepository()
+    repo.save_profile("halil", {"age": 30, "gender": "male", "height_cm": 180, "weight_kg": 80.0})
     app = create_app(settings=_settings(), repository=repo)
 
     response = app.test_client().post(
@@ -361,6 +366,7 @@ def test_weight_post_logs_weight_separately() -> None:
 
     assert response.status_code == 200
     assert repo.get_profile("halil")["weight_kg"] == 82.4
+    assert repo.get_profile("halil")["bmr_calories"] == 2165
     assert repo.list_weight_logs(
         "halil",
         start_date="2026-06-13",
@@ -404,7 +410,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260623-15" in response.data
+    assert b"/static/forms.js?v=20260623-16" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -500,6 +506,29 @@ def test_profile_form_includes_loading_state() -> None:
     assert b'type="text" name="weight_kg"' in response.data
     assert b'type="text" name="goal_weight_kg"' in response.data
     assert b"Saving..." in response.data
+
+
+def test_profile_post_calculates_bmr() -> None:
+    repo = MemoryDietRepository()
+    app = create_app(settings=_settings(), repository=repo)
+
+    response = app.test_client().post(
+        "/profile",
+        data={
+            "name": "Halil",
+            "age": "30",
+            "gender": "male",
+            "height_cm": "180",
+            "weight_kg": "82.4",
+            "goal_weight_kg": "78",
+            "activity_level": "moderate",
+            "goal": "fat_loss",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert repo.get_profile("halil")["bmr_calories"] == 2435
 
 
 def test_login_post_accepts_configured_password() -> None:

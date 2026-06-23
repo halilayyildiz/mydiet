@@ -24,6 +24,7 @@ from mydiet.firestore_db import DietRepository, MemoryDietRepository
 from mydiet.gemini_client import GeminiDietClient
 from mydiet.nutrition import (
     RANGE_OPTIONS,
+    compute_bmr_calories,
     date_window,
     fallback_analysis,
     food_item_groups,
@@ -36,7 +37,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20260623-15"
+ASSET_VERSION = "20260623-16"
 
 TEXTS = {
     "en": {
@@ -286,7 +287,7 @@ def create_app(
     def load_preferred_language() -> None:
         if session.get("lang") in TEXTS or request.endpoint in {"static", "uploaded_file"}:
             return
-        profile = repo.get_profile(settings.single_user_id)
+        profile = _profile_with_bmr(repo.get_profile(settings.single_user_id))
         preferred_language = str(profile.get("preferred_language") or "")
         if preferred_language in TEXTS:
             session["lang"] = preferred_language
@@ -468,7 +469,14 @@ def create_app(
         if not weight_text:
             flash(_t("enter_weight"), "error")
             return redirect(url_for("weight"))
-        repo.save_weight(settings.single_user_id, entry_date, _required_float(weight_text))
+        weight_kg = _required_float(weight_text)
+        profile = repo.get_profile(settings.single_user_id)
+        profile["weight_kg"] = weight_kg
+        repo.save_weight(settings.single_user_id, entry_date, weight_kg)
+        repo.save_profile(
+            settings.single_user_id,
+            {"bmr_calories": compute_bmr_calories(profile, use_stored=False)},
+        )
         flash(_t("weight_logged"), "success")
         return redirect(url_for("weight"))
 
@@ -493,6 +501,7 @@ def create_app(
             "activity_level": request.form.get("activity_level", "moderate"),
             "goal": request.form.get("goal", "fat_loss"),
         }
+        payload["bmr_calories"] = compute_bmr_calories(payload, use_stored=False)
         repo.save_profile(settings.single_user_id, payload)
         if payload["weight_kg"]:
             repo.save_weight(settings.single_user_id, today_iso(settings.timezone), float(payload["weight_kg"]))
@@ -588,6 +597,7 @@ def _trend_series(dates: list[str], entries: list[dict[str, Any]]) -> list[dict[
                 "date": date_key,
                 "has_data": True,
                 "food": int(analysis.get("food_calories") or 0),
+                "basal": _analysis_basal(analysis),
                 "burned": int(analysis.get("burned_calories") or 0),
                 "activity": int(analysis.get("activity_calories") or 0),
                 "deficit": int(analysis.get("calorie_deficit") or 0),
@@ -696,10 +706,11 @@ def _date_range_label(start_date: str, end_date: str, *, lang: str = "en") -> st
 
 
 def _totals(entries: list[dict[str, Any]]) -> dict[str, int]:
-    totals = {"food": 0, "burned": 0, "activity": 0, "deficit": 0}
+    totals = {"food": 0, "basal": 0, "burned": 0, "activity": 0, "deficit": 0}
     for entry in entries:
         analysis = entry.get("analysis") or {}
         totals["food"] += int(analysis.get("food_calories") or 0)
+        totals["basal"] += _analysis_basal(analysis)
         totals["burned"] += int(analysis.get("burned_calories") or 0)
         totals["activity"] += int(analysis.get("activity_calories") or 0)
         totals["deficit"] += int(analysis.get("calorie_deficit") or 0)
@@ -716,7 +727,7 @@ def _balance_summary(averages: dict[str, int]) -> dict[str, Any]:
     food = max(int(averages.get("food") or 0), 0)
     burned = max(int(averages.get("burned") or 0), 0)
     activity = max(int(averages.get("activity") or 0), 0)
-    basal = max(burned - activity, 0)
+    basal = max(int(averages.get("basal") or burned - activity), 0)
     deficit = int(averages.get("deficit") or burned - food)
     max_value = max(food, burned, 1)
 
@@ -733,6 +744,20 @@ def _balance_summary(averages: dict[str, int]) -> dict[str, Any]:
         "basal_pct": round(basal / max_value * 100),
         "activity_pct": round(min(activity, burned) / max_value * 100),
     }
+
+
+def _analysis_basal(analysis: dict[str, Any]) -> int:
+    if analysis.get("bmr_calories"):
+        return int(analysis.get("bmr_calories") or 0)
+    burned = int(analysis.get("burned_calories") or 0)
+    activity = int(analysis.get("activity_calories") or 0)
+    return max(burned - activity, 0)
+
+
+def _profile_with_bmr(profile: dict[str, Any]) -> dict[str, Any]:
+    if profile.get("bmr_calories"):
+        return profile
+    return {**profile, "bmr_calories": compute_bmr_calories(profile)}
 
 
 def _optional_int(value: str | None) -> int | None:

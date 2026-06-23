@@ -12,6 +12,12 @@ RANGE_OPTIONS = {
     "90d": 90,
 }
 
+BMR_ACTIVITY_MULTIPLIERS = {
+    "low": 1.2,
+    "moderate": 1.35,
+    "high": 1.55,
+}
+
 MEAL_GROUPS = [
     ("morning", "Morning"),
     ("lunch", "Lunch"),
@@ -67,6 +73,7 @@ def normalize_analysis(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "food_calories": _number(payload.get("food_calories")),
         "food_items": _food_items(payload.get("food_items")),
+        "bmr_calories": _number(payload.get("bmr_calories")),
         "activity_calories": _number(payload.get("activity_calories")),
         "burned_calories": _number(payload.get("burned_calories")),
         "calorie_deficit": _number(payload.get("calorie_deficit")),
@@ -98,21 +105,18 @@ def fallback_analysis(
     reason: str = "Set GEMINI_API_KEY to calculate from diary text and images.",
     language: str = "en",
 ) -> dict[str, Any]:
-    weight = _number(profile.get("weight_kg")) or 80
-    height = _number(profile.get("height_cm")) or 175
-    age = _number(profile.get("age")) or 35
-    gender = str(profile.get("gender") or "").lower()
-    bmr = 10 * weight + 6.25 * height - 5 * age + (5 if gender == "male" else -161)
+    bmr = compute_bmr_calories(profile)
     food = _rough_food_calories(diary_text)
     food_items = _rough_food_items(diary_text, food)
     activity = _rough_activity_calories(diary_text)
-    burned = round(max(bmr * 1.25 + activity, 1200))
+    burned = round(max(bmr + activity, 1200))
     summary = "Saved without Gemini analysis. Values are rough placeholders."
     if language == "tr":
         summary = "Gemini analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
     return {
         "food_calories": food,
         "food_items": food_items,
+        "bmr_calories": bmr,
         "activity_calories": activity,
         "burned_calories": burned,
         "calorie_deficit": burned - food,
@@ -125,6 +129,20 @@ def fallback_analysis(
     }
 
 
+def compute_bmr_calories(profile: dict[str, Any], *, use_stored: bool = True) -> int:
+    stored_bmr = _number(profile.get("bmr_calories"))
+    if use_stored and stored_bmr:
+        return stored_bmr
+    weight = _float(profile.get("weight_kg")) or 80
+    height = _float(profile.get("height_cm")) or 175
+    age = _float(profile.get("age")) or 35
+    gender = str(profile.get("gender") or "").lower()
+    raw_bmr = 10 * weight + 6.25 * height - 5 * age + (5 if gender == "male" else -161)
+    activity_level = str(profile.get("activity_level") or "low").lower()
+    multiplier = BMR_ACTIVITY_MULTIPLIERS.get(activity_level, BMR_ACTIVITY_MULTIPLIERS["low"])
+    return round(raw_bmr * multiplier)
+
+
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -134,6 +152,15 @@ def _number(value: Any) -> int:
         return 0
     try:
         return int(round(float(value)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _float(value: Any) -> float:
+    if value in {None, ""}:
+        return 0
+    try:
+        return float(value)
     except (TypeError, ValueError):
         return 0
 

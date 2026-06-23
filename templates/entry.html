@@ -38,6 +38,7 @@
       {% if analysis %}
         <dl class="analysis-list">
           <div><dt>{{ t.food }}</dt><dd>{{ analysis.food_calories }} kcal</dd></div>
+          <div><dt>{{ t.basal }}</dt><dd>{{ analysis.bmr_calories or 0 }} kcal</dd></div>
           <div><dt>{{ t.burned }}</dt><dd>{{ analysis.burned_calories }} kcal</dd></div>
           <div><dt>{{ t.activity }}</dt><dd>{{ analysis.activity_calories }} kcal</dd></div>
           <div><dt>{{ t.deficit }}</dt><dd>{{ analysis.calorie_deficit }} kcal</dd></div>

@@ -66,6 +66,7 @@ def test_default_analysis_prompt_requests_food_items() -> None:
     prompt = analysis_prompt(settings, "ate eggs", {}, "2026-06-13")
 
     assert '"food_items"' in prompt
+    assert '"bmr_calories"' in prompt
     assert '"meal"' in prompt
     assert '"protein_g"' in prompt
     assert "total macro grams" in prompt

@@ -178,7 +178,7 @@
         const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, 0, niceMax);
         const burned = Number(row.burned || 0);
         const activity = Math.min(Number(row.activity || 0), burned);
-        const basal = Math.max(burned - activity, 0);
+        const basal = Number(row.basal || Math.max(burned - activity, 0));
         return {
           index: sourceIndex,
           x: burnedPoint.x,
