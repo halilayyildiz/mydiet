@@ -177,18 +177,14 @@
         const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, 0, niceMax);
         const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, 0, niceMax);
         const burned = Number(row.burned || 0);
-        const activity = Math.min(Number(row.activity || 0), burned);
-        const basal = Number(row.basal || Math.max(burned - activity, 0));
         return {
           index: sourceIndex,
           x: burnedPoint.x,
           y: Math.min(burnedPoint.y, foodPoint.y),
           html: `
             <strong>${escapeHtml(row.date)}</strong>
-            <span><i style="background:${colors.food}"></i>${escapeHtml(text.consumed)} ${formatValue(row.food)} kcal</span>
             <span><i style="background:${colors.burned}"></i>${escapeHtml(text.burned)} ${formatValue(burned)} kcal</span>
-            <span><i style="background:${colors.burned}"></i>${escapeHtml(text.basal)} ${formatValue(basal)} kcal</span>
-            <span><i style="background:${colors.activity}"></i>${escapeHtml(text.activity)} ${formatValue(row.activity)} kcal</span>
+            <span><i style="background:${colors.food}"></i>${escapeHtml(text.consumed)} ${formatValue(row.food)} kcal</span>
           `,
         };
       });
@@ -398,9 +394,9 @@
     const values = plotRows.map((row) => Number(row.weight));
     const rawMin = Math.min(...values);
     const rawMax = Math.max(...values);
-    const min = Math.floor((rawMin - 1) / 5) * 5;
-    const max = Math.ceil((rawMax + 1) / 5) * 5;
-    const ticks = [max, Math.round((max + min) / 2), min];
+    const min = Math.floor(rawMin - 1);
+    const max = Math.ceil(rawMax + 1);
+    const ticks = Array.from({ length: max - min + 1 }, (_, index) => max - index);
     const labelEvery = Math.max(1, Math.ceil(rows.length / 6));
     const linePath = plotRows
       .map((row, pathIndex) => {
