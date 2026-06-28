@@ -50,7 +50,7 @@ def test_compute_bmr_calories_uses_profile_formula_with_low_activity() -> None:
             "gender": "male",
             "activity_level": "low",
         }
-    ) == 2165
+    ) == 1984
 
 
 def test_normalize_analysis_casts_numbers() -> None:

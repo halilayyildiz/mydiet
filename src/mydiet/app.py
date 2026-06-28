@@ -38,7 +38,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20260623-17"
+ASSET_VERSION = "20260628-1"
 
 TEXTS = {
     "en": {
@@ -57,6 +57,7 @@ TEXTS = {
         "body_weight": "Body weight",
         "burned": "Burned",
         "calendar_month": "Calendar month",
+        "calculated_basal": "Calculated basal",
         "calorie_deficit_calendar": "Calorie deficit calendar",
         "calorie_deficit_trend": "Calorie deficit trend",
         "calorie_trend_chart": "Calorie trend chart",
@@ -159,6 +160,7 @@ TEXTS = {
         "body_weight": "Vücut ağırlığı",
         "burned": "Yakılan",
         "calendar_month": "Takvim ayı",
+        "calculated_basal": "Hesaplanan bazal",
         "calorie_deficit_calendar": "Kalori açığı takvimi",
         "calorie_deficit_trend": "Kalori açığı trendi",
         "calorie_trend_chart": "Kalori trend grafiği",
@@ -560,7 +562,7 @@ def create_app(
         return render_template(
             "profile.html",
             active_page="profile",
-            profile=repo.get_profile(_current_user_id(settings)),
+            profile=_profile_with_bmr(repo.get_profile(_current_user_id(settings))),
             today=today_iso(settings.timezone),
         )
 

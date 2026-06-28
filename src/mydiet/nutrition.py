@@ -13,9 +13,9 @@ RANGE_OPTIONS = {
 }
 
 BMR_ACTIVITY_MULTIPLIERS = {
-    "low": 1.2,
-    "moderate": 1.35,
-    "high": 1.55,
+    "low": 1.1,
+    "moderate": 1.25,
+    "high": 1.45,
 }
 
 MEAL_GROUPS = [

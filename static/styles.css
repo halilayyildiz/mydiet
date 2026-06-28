@@ -1190,6 +1190,37 @@ h2 {
   font-size: 24px;
 }
 
+.profile-bmr-preview {
+  color: var(--muted);
+  display: grid;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 7px;
+}
+
+.profile-bmr-preview > span {
+  color: var(--muted);
+}
+
+.profile-bmr-preview strong {
+  align-items: center;
+  background: var(--green-soft);
+  border: 1px solid #b8ded0;
+  border-radius: 8px;
+  color: var(--green);
+  display: flex;
+  font-size: 16px;
+  font-weight: 900;
+  justify-content: flex-start;
+  min-height: 48px;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+
+.profile-bmr-preview strong span {
+  color: inherit;
+}
+
 .login-flash-stack {
   display: grid;
   gap: 8px;

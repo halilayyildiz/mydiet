@@ -92,7 +92,7 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     )
     app = create_app(settings=_settings(), repository=repo)
 
-    response = app.test_client().get("/?range=14d")
+    response = app.test_client().get("/?range=30d")
 
     assert response.status_code == 200
     assert b"Energy balance" in response.data
@@ -147,12 +147,12 @@ def test_dashboard_weight_series_uses_selected_range() -> None:
     repo.save_weight("halil", "2026-06-13", 82.4)
     app = create_app(settings=_settings(), repository=repo)
 
-    response = app.test_client().get("/?range=14d")
+    response = app.test_client().get("/?range=30d")
 
     assert response.status_code == 200
     assert b'"weight": 82.4' in response.data
     assert b'"weight": 90.0' not in response.data
-    assert f'"date": "{date_window(14)[0]}"'.encode() in response.data
+    assert f'"date": "{date_window(30)[0]}"'.encode() in response.data
 
 
 def test_dashboard_calendar_has_month_navigation() -> None:
@@ -168,9 +168,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260623-17" in response.data
-    assert b"/static/charts.js?v=20260623-17" in response.data
-    assert b"/static/dashboard.js?v=20260623-17" in response.data
+    assert b"/static/styles.css?v=20260628-1" in response.data
+    assert b"/static/charts.js?v=20260628-1" in response.data
+    assert b"/static/dashboard.js?v=20260628-1" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -368,7 +368,7 @@ def test_weight_post_logs_weight_separately() -> None:
 
     assert response.status_code == 200
     assert repo.get_profile("halil")["weight_kg"] == 82.4
-    assert repo.get_profile("halil")["bmr_calories"] == 2165
+    assert repo.get_profile("halil")["bmr_calories"] == 1984
     assert repo.list_weight_logs(
         "halil",
         start_date="2026-06-13",
@@ -412,7 +412,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260623-17" in response.data
+    assert b"/static/forms.js?v=20260628-1" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -507,6 +507,9 @@ def test_profile_form_includes_loading_state() -> None:
     assert b"data-loading-status hidden" in response.data
     assert b'type="text" name="weight_kg"' in response.data
     assert b'type="text" name="goal_weight_kg"' in response.data
+    assert b"data-bmr-form" in response.data
+    assert b"data-bmr-preview" in response.data
+    assert b"Calculated basal" in response.data
     assert b"Saving..." in response.data
 
 
@@ -530,7 +533,7 @@ def test_profile_post_calculates_bmr() -> None:
     )
 
     assert response.status_code == 200
-    assert repo.get_profile("halil")["bmr_calories"] == 2435
+    assert repo.get_profile("halil")["bmr_calories"] == 2255
 
 
 def test_login_post_accepts_configured_password() -> None:

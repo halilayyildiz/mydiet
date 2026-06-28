@@ -13,6 +13,7 @@
     class="profile-grid"
     method="post"
     data-loading-form
+    data-bmr-form
     data-loading-message="{{ t.saving_profile }}"
   >
     <div class="form-status" data-loading-status hidden>
@@ -58,6 +59,10 @@
         {% endfor %}
       </select>
     </label>
+    <div class="profile-bmr-preview" aria-live="polite">
+      <span>{{ t.calculated_basal }}</span>
+      <strong><span data-bmr-preview>{{ profile.bmr_calories or 0 }}</span> kcal</strong>
+    </div>
     <label>
       {{ t.goal }}
       <select name="goal" required>

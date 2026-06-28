@@ -12,7 +12,7 @@ def test_backfill_bmr_dry_run_reports_without_writing() -> None:
 
     assert len(changes) == 1
     assert changes[0].old_bmr == 0
-    assert changes[0].new_bmr == 2165
+    assert changes[0].new_bmr == 1984
     assert analysis["burned_calories"] == 2600
     assert "bmr_calories" not in analysis
 
@@ -25,10 +25,10 @@ def test_backfill_bmr_apply_updates_profile_and_entry_analysis() -> None:
     analysis = repo.get_entry("halil", "2026-06-13")["analysis"]
 
     assert len(changes) == 1
-    assert profile["bmr_calories"] == 2165
-    assert analysis["bmr_calories"] == 2165
-    assert analysis["burned_calories"] == 2565
-    assert analysis["calorie_deficit"] == 1165
+    assert profile["bmr_calories"] == 1984
+    assert analysis["bmr_calories"] == 1984
+    assert analysis["burned_calories"] == 2384
+    assert analysis["calorie_deficit"] == 984
 
 
 def _repo_with_old_entry() -> MemoryDietRepository:
