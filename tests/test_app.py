@@ -171,10 +171,10 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20260628-3" in response.data
-    assert b"/static/favicon.svg?v=20260628-3" in response.data
-    assert b"/static/charts.js?v=20260628-3" in response.data
-    assert b"/static/dashboard.js?v=20260628-3" in response.data
+    assert b"/static/styles.css?v=20260628-4" in response.data
+    assert b"/static/favicon.svg?v=20260628-4" in response.data
+    assert b"/static/charts.js?v=20260628-4" in response.data
+    assert b"/static/dashboard.js?v=20260628-4" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -416,7 +416,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20260628-3" in response.data
+    assert b"/static/forms.js?v=20260628-4" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -511,6 +511,9 @@ def test_profile_form_includes_loading_state() -> None:
     assert b"data-loading-status hidden" in response.data
     assert b'type="text" name="weight_kg"' in response.data
     assert b'type="text" name="goal_weight_kg"' in response.data
+    assert b"Height (cm)" in response.data
+    assert b"Current weight (kg)" in response.data
+    assert b"Goal weight (kg)" in response.data
     assert b"data-bmr-form" in response.data
     assert b"data-bmr-preview" in response.data
     assert b"Calculated basal" in response.data
@@ -643,7 +646,7 @@ def test_login_form_includes_username_field() -> None:
     assert b'name="username"' in response.data
     assert b'value="halil"' in response.data
     assert b'autocomplete="username"' in response.data
-    assert b"/static/favicon.svg?v=20260628-3" in response.data
+    assert b"/static/favicon.svg?v=20260628-4" in response.data
     assert b'href="/register"' in response.data
 
 

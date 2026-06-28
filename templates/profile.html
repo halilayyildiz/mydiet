@@ -37,19 +37,16 @@
       </select>
     </label>
     <label>
-      {{ t.height }}
+      {{ t.height }} (cm)
       <input type="number" name="height_cm" value="{{ profile.height_cm or '' }}" min="80" max="240" required>
-      <span>cm</span>
     </label>
     <label>
-      {{ t.current_weight }}
+      {{ t.current_weight }} (kg)
       <input type="text" name="weight_kg" value="{{ profile.weight_kg or '' }}" inputmode="decimal" pattern="[0-9]+([\.,][0-9]+)?" required>
-      <span>kg</span>
     </label>
     <label>
-      {{ t.goal_weight }}
+      {{ t.goal_weight }} (kg)
       <input type="text" name="goal_weight_kg" value="{{ profile.goal_weight_kg or '' }}" inputmode="decimal" pattern="[0-9]+([\.,][0-9]+)?">
-      <span>kg</span>
     </label>
     <label>
       {{ t.activity_level }}

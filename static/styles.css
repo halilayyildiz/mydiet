@@ -1136,12 +1136,15 @@ h2 {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
   padding: 22px;
 }
 
 .profile-grid button {
   grid-column: 1 / -1;
+  margin-top: 4px;
 }
 
 .flash-stack {
@@ -1196,6 +1199,7 @@ h2 {
   font-size: 13px;
   font-weight: 900;
   gap: 7px;
+  min-width: 0;
 }
 
 .profile-bmr-preview > span {
@@ -1219,6 +1223,17 @@ h2 {
 
 .profile-bmr-preview strong span {
   color: inherit;
+}
+
+.profile-grid label,
+.profile-bmr-preview {
+  align-self: stretch;
+  grid-template-rows: 18px 48px;
+}
+
+.profile-grid label > :not(:first-child),
+.profile-bmr-preview strong {
+  min-height: 48px;
 }
 
 .login-flash-stack {
