@@ -172,6 +172,7 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
     assert b"/static/styles.css?v=20260628-3" in response.data
+    assert b"/static/favicon.svg?v=20260628-3" in response.data
     assert b"/static/charts.js?v=20260628-3" in response.data
     assert b"/static/dashboard.js?v=20260628-3" in response.data
 
@@ -642,6 +643,7 @@ def test_login_form_includes_username_field() -> None:
     assert b'name="username"' in response.data
     assert b'value="halil"' in response.data
     assert b'autocomplete="username"' in response.data
+    assert b"/static/favicon.svg?v=20260628-3" in response.data
     assert b'href="/register"' in response.data
 
 
