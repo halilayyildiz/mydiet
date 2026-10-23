@@ -4,12 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}MyDiet{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg', v=asset_version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>
   <body>
     <header class="site-header">
       <a class="brandmark" href="{{ url_for('dashboard') }}" aria-label="MyDiet home">
-        <span class="brand-icon">M</span>
+        <img class="brand-icon" src="{{ url_for('static', filename='logo.svg', v=asset_version) }}" alt="">
         <span>MyDiet</span>
       </a>
       <form class="language-form" action="{{ url_for('set_language') }}" method="post" aria-label="{{ t.language }}">

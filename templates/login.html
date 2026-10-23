@@ -4,12 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyDiet Login</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg', v=asset_version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>
   <body class="login-body">
     <main class="login-panel">
       <div class="brandmark login-brand">
-        <span class="brand-icon">M</span>
+        <img class="brand-icon" src="{{ url_for('static', filename='logo.svg', v=asset_version) }}" alt="">
         <span>MyDiet</span>
       </div>
       <form method="post" class="stack-form">
