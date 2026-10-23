@@ -1719,3 +1719,29 @@ h2 {
     white-space: nowrap;
   }
 }
+
+/* Demo */
+
+.demo-banner {
+  align-items: center;
+  background: #fff6df;
+  border-bottom: 1px solid #f0dca6;
+  color: #7a5b12;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 12px;
+  justify-content: center;
+  padding: 8px 16px;
+}
+
+.demo-banner a {
+  color: inherit;
+  font-weight: 800;
+}
+
+.auth-switch {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}

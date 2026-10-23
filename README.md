@@ -51,6 +51,13 @@ MyDiet only sums them up (no second analysis). Set `MCP_TOKEN` to a long random 
 `https://mydiet.halilayyildiz.com/mcp/<MCP_TOKEN>` in claude.ai → Settings → Connectors → Add custom connector.
 The secret path is the only credential, so keep the URL private.
 
+## Demo
+
+`/demo` opens a read-only demo with made-up data: 90 days of someone going from 101 kg to 92 kg, with a few
+overeating days. It runs in the same process but uses its own database (`MYDIET_DEMO_DB`, default `data/demo.db`),
+rebuilt whenever its newest day is no longer today. Nothing a demo visitor does is saved, and the Claude connector
+never touches it. `/demo/exit` (or the link in the demo banner) leaves it.
+
 ## Storage
 
 SQLite at `MYDIET_DB` (default `data/mydiet.db`): tables `profiles`, `daily_entries` and `weight_logs`,

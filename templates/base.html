@@ -52,6 +52,13 @@
       {% endif %}
     {% endwith %}
 
+    {% if demo %}
+      <div class="demo-banner">
+        <span>{{ t.demo_banner }}</span>
+        <a href="{{ url_for('demo_exit') }}">{{ t.demo_exit }}</a>
+      </div>
+    {% endif %}
+
     <main class="page-shell">
       {% block content %}{% endblock %}
     </main>

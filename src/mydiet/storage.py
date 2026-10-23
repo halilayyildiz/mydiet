@@ -14,8 +14,8 @@ from mydiet.settings import Settings
 class DietRepository:
     """Stores each profile, day and weight log as a JSON document in a local SQLite file."""
 
-    def __init__(self, settings: Settings) -> None:
-        self.path = settings.database_path
+    def __init__(self, settings: Settings, path: Path | None = None) -> None:
+        self.path = path or settings.database_path
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.execute("PRAGMA journal_mode=WAL")

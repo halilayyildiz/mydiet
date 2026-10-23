@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     use_memory_repository: bool = Field(default=False, alias="USE_MEMORY_REPOSITORY")
     mcp_token: str = Field(default="", alias="MCP_TOKEN")
     database_path: Path = Field(default=Path("data/mydiet.db"), alias="MYDIET_DB")
+    demo_database_path: Path = Field(default=Path("data/demo.db"), alias="MYDIET_DEMO_DB")
 
     @cached_property
     def app_config(self) -> dict[str, Any]:

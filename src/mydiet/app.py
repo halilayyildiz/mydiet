@@ -25,6 +25,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from mydiet.claude_client import analyze_entry
+from mydiet.demo import DEMO_USER, SessionRepository, ensure_demo_data, is_demo
 from mydiet.mcp import register_mcp
 from mydiet.storage import DietRepository, MemoryDietRepository
 from mydiet.nutrition import (
@@ -40,7 +41,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261024-3"
+ASSET_VERSION = "20261024-5"
 
 TEXTS = {
     "en": {
@@ -97,6 +98,10 @@ TEXTS = {
         "high": "High",
         "last_days": "Last {days} days",
         "log_out": "Log out",
+        "demo_banner": "Demo: made-up data, read-only.",
+        "demo_exit": "Exit demo",
+        "demo_read_only": "This is a read-only demo.",
+        "try_demo": "Try the demo",
         "log_weight": "Log weight",
         "logging": "Logging...",
         "logging_weight": "Logging your weight.",
@@ -201,6 +206,10 @@ TEXTS = {
         "language": "Dil",
         "last_days": "Son {days} gün",
         "log_out": "Çıkış",
+        "demo_banner": "Demo: örnek veriler, sadece görüntüleme.",
+        "demo_exit": "Demodan çık",
+        "demo_read_only": "Bu demo sadece görüntüleme içindir.",
+        "try_demo": "Demoyu dene",
         "log_weight": "Kilo gir",
         "logging": "Kaydediliyor...",
         "logging_weight": "Kilon kaydediliyor.",
@@ -292,9 +301,18 @@ def create_app(
     app.config["UPLOAD_DIR"] = settings.upload_dir
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
 
-    repo = repository or (MemoryDietRepository() if settings.use_memory_repository else DietRepository(settings))
+    real_repo = repository or (
+        MemoryDietRepository() if settings.use_memory_repository else DietRepository(settings)
+    )
+    demo_repo = (
+        MemoryDietRepository()
+        if repository is not None or settings.use_memory_repository
+        else DietRepository(settings, settings.demo_database_path)
+    )
+    repo = SessionRepository(real_repo, demo_repo)
 
-    register_mcp(app, repo, settings)
+    # The Claude connector always writes the real data, never the demo.
+    register_mcp(app, real_repo, settings)
 
     @app.template_filter("short_date")
     def short_date(value: str) -> str:
@@ -312,6 +330,7 @@ def create_app(
             "lang": lang,
             "t": text,
             "username": _current_user_id(settings),
+            "demo": is_demo(),
         }
 
     @app.before_request
@@ -342,6 +361,8 @@ def create_app(
             "static",
             "uploaded_file",
             "mcp",
+            "demo",
+            "demo_exit",
         }:
             return None
         if not session.get("authenticated"):
@@ -413,6 +434,32 @@ def create_app(
             },
         )
         flash(_t("user_created"), "success")
+        return redirect(url_for("login"))
+
+    @app.before_request
+    def keep_demo_read_only() -> Any:
+        if not is_demo():
+            return None
+        ensure_demo_data(demo_repo, local_date(settings.timezone))
+        if request.method == "POST" and request.endpoint not in {"set_language", "logout", "demo_exit"}:
+            flash(_t("demo_read_only"), "error")
+            return redirect(request.referrer or url_for("dashboard"))
+        return None
+
+    @app.get("/demo")
+    def demo() -> Any:
+        lang = session.get("lang") or "tr"
+        session.clear()
+        session.update(demo=True, authenticated=True, user_id=DEMO_USER, lang=lang)
+        ensure_demo_data(demo_repo, local_date(settings.timezone))
+        return redirect(url_for("dashboard", range="90d"))
+
+    @app.get("/demo/exit")
+    def demo_exit() -> Any:
+        lang = session.get("lang")
+        session.clear()
+        if lang in TEXTS:
+            session["lang"] = lang
         return redirect(url_for("login"))
 
     @app.post("/logout")

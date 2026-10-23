@@ -103,6 +103,7 @@
 
   function renderEnergyChart(container, rows) {
     if (!container) return;
+    const dotRadius = rows.length > 45 ? 2.6 : rows.length > 20 ? 3.6 : 4.8;
     const width = Math.max(container.clientWidth, 240);
     const height = container.clientHeight || 318;
     const pad = { top: 26, right: 18, bottom: 46, left: 52 };
@@ -165,8 +166,8 @@
         const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, 0, niceMax);
         const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, 0, niceMax);
         return [
-          `<circle data-chart-index="${sourceIndex}" cx="${burnedPoint.x}" cy="${burnedPoint.y}" r="4.8" fill="${colors.burned}" class="health-dot health-dot-burned"></circle>`,
-          `<circle data-chart-index="${sourceIndex}" cx="${foodPoint.x}" cy="${foodPoint.y}" r="4.8" fill="${colors.food}" class="health-dot health-dot-food"></circle>`,
+          `<circle data-chart-index="${sourceIndex}" cx="${burnedPoint.x}" cy="${burnedPoint.y}" r="${dotRadius}" fill="${colors.burned}" class="health-dot health-dot-burned"></circle>`,
+          `<circle data-chart-index="${sourceIndex}" cx="${foodPoint.x}" cy="${foodPoint.y}" r="${dotRadius}" fill="${colors.food}" class="health-dot health-dot-food"></circle>`,
         ];
       })
       .join("");
@@ -230,7 +231,7 @@
     const chartHeight = height - pad.top - pad.bottom;
     const baseY = height - pad.bottom;
     const slot = chartWidth / Math.max(rows.length, 1);
-    const barWidth = Math.max(8, Math.min(24, slot * 0.52));
+    const barWidth = Math.max(2, Math.min(24, slot * 0.6));
     const ticks = Array.from({ length: niceMax / 200 + 1 }, (_, index) => index * 200).reverse();
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
@@ -261,7 +262,7 @@
         const barHeight = Math.max(4, (activity / niceMax) * chartHeight);
         const y = baseY - barHeight;
         return `
-          <rect data-chart-index="${index}" class="health-bar health-bar-activity" x="${x - barWidth / 2}" y="${y}" width="${barWidth}" height="${barHeight}" rx="7" fill="${colors.activity}" opacity="0.9"></rect>
+          <rect data-chart-index="${index}" class="health-bar health-bar-activity" x="${x - barWidth / 2}" y="${y}" width="${barWidth}" height="${barHeight}" rx="${Math.min(7, barWidth / 2)}" fill="${colors.activity}" opacity="0.9"></rect>
           ${label}
         `;
       })
@@ -311,7 +312,7 @@
     const chartHeight = height - pad.top - pad.bottom;
     const zeroY = point({ deficit: 0 }, 0, [0], "deficit", width, height, pad, -niceMax, niceMax).y;
     const slot = chartWidth / Math.max(rows.length, 1);
-    const barWidth = Math.max(8, Math.min(24, slot * 0.52));
+    const barWidth = Math.max(2, Math.min(24, slot * 0.6));
     const ticks = [];
     for (let tick = niceMax; tick >= -niceMax; tick -= tickStep) {
       ticks.push(tick);
@@ -347,7 +348,7 @@
         const barY = deficit >= 0 ? y : zeroY;
         const fill = deficit >= 0 ? colors.burned : colors.red;
         return `
-          <rect data-chart-index="${index}" class="health-bar health-bar-deficit" x="${x - barWidth / 2}" y="${barY}" width="${barWidth}" height="${barHeight}" rx="7" fill="${fill}" opacity="0.9"></rect>
+          <rect data-chart-index="${index}" class="health-bar health-bar-deficit" x="${x - barWidth / 2}" y="${barY}" width="${barWidth}" height="${barHeight}" rx="${Math.min(7, barWidth / 2)}" fill="${fill}" opacity="0.9"></rect>
           ${label}
         `;
       })
@@ -381,6 +382,7 @@
 
   function renderWeightChart(container, rows) {
     if (!container) return;
+    const dotRadius = rows.length > 45 ? 2.6 : rows.length > 20 ? 3.6 : 4.8;
     const width = Math.max(container.clientWidth, 240);
     const height = container.clientHeight || 238;
     const pad = { top: 24, right: 20, bottom: 42, left: 48 };
@@ -398,7 +400,8 @@
     const rawMax = Math.max(...values);
     const min = Math.floor(rawMin - 1);
     const max = Math.ceil(rawMax + 1);
-    const ticks = Array.from({ length: max - min + 1 }, (_, index) => max - index);
+    const tickStep = max - min > 12 ? 3 : max - min > 6 ? 2 : 1;
+    const ticks = Array.from({ length: Math.floor((max - min) / tickStep) + 1 }, (_, index) => max - index * tickStep);
     const labelEvery = Math.max(1, Math.ceil(rows.length / 6));
     const linePath = plotRows
       .map((row, pathIndex) => {
@@ -422,7 +425,7 @@
       .map((row) => {
         const sourceIndex = rows.indexOf(row);
         const p = point(row, sourceIndex, rows, "weight", width, height, pad, min, max);
-        return `<circle data-chart-index="${sourceIndex}" cx="${p.x}" cy="${p.y}" r="4.5" fill="${colors.burned}" class="health-dot"></circle>`;
+        return `<circle data-chart-index="${sourceIndex}" cx="${p.x}" cy="${p.y}" r="${dotRadius}" fill="${colors.burned}" class="health-dot"></circle>`;
       })
       .join("");
 
