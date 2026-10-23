@@ -21,6 +21,7 @@ dev = [
 
 [project.scripts]
 mydiet = "mydiet.app:main"
+mydiet-backfill-bmr = "mydiet.backfill_bmr:main"
 
 [build-system]
 requires = ["hatchling"]

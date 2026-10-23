@@ -19,6 +19,19 @@ def test_json_safe_converts_datetime_values() -> None:
     assert safe["nested"][0]["seen_at"] == "2026-06-12T00:00:00+00:00"
 
 
+def test_default_claude_model() -> None:
+    settings = Settings(
+        APP_ENV="missing-config-env",
+        APP_PASSWORD="",
+        APP_PASSWORD_HASH="",
+        ANTHROPIC_API_KEY="",
+        FLASK_SECRET_KEY="test",
+    )
+    settings.app_config.clear()
+
+    assert settings.claude_model == "claude-opus-5-5"
+
+
 def test_analysis_prompt_comes_from_configured_file(tmp_path) -> None:
     prompt_path = tmp_path / "prompt.txt"
     prompt_path.write_text(
@@ -53,6 +66,7 @@ def test_default_analysis_prompt_requests_food_items() -> None:
     prompt = analysis_prompt(settings, "ate eggs", {}, "2026-06-13")
 
     assert '"food_items"' in prompt
+    assert '"bmr_calories"' in prompt
     assert '"meal"' in prompt
     assert '"protein_g"' in prompt
     assert "total macro grams" in prompt
@@ -85,6 +99,7 @@ def test_analyze_day_sends_images_and_returns_parsed_analysis(tmp_path) -> None:
         food_items=[
             {"name": "salad", "meal": "lunch", "calories": 600, "protein_g": 30, "carbs_g": 40, "fat_g": 20}
         ],
+        bmr_calories=2200,
         activity_calories=0,
         burned_calories=2200,
         calorie_deficit=1600,

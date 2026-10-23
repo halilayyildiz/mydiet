@@ -3,8 +3,9 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import re
 import secrets
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -20,16 +21,18 @@ from flask import (
     url_for,
 )
 from werkzeug.datastructures import FileStorage
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
-from mydiet.storage import DietRepository, MemoryDietRepository
 from mydiet.claude_client import analyze_entry
 from mydiet.mcp import register_mcp
+from mydiet.storage import DietRepository, MemoryDietRepository
 from mydiet.nutrition import (
     RANGE_OPTIONS,
+    compute_bmr_calories,
     date_window,
     food_item_groups,
+    local_date,
     month_window,
     parse_iso_date,
     today_iso,
@@ -37,7 +40,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261023-3"
+ASSET_VERSION = "20261023-4"
 
 TEXTS = {
     "en": {
@@ -56,6 +59,7 @@ TEXTS = {
         "body_weight": "Body weight",
         "burned": "Burned",
         "calendar_month": "Calendar month",
+        "calculated_basal": "Calculated basal",
         "calorie_deficit_calendar": "Calorie deficit calendar",
         "calorie_deficit_trend": "Calorie deficit trend",
         "calorie_trend_chart": "Calorie trend chart",
@@ -68,6 +72,7 @@ TEXTS = {
         "daily_calorie_balance": "Daily calorie balance",
         "daily_deficit_or_surplus": "Daily deficit or surplus",
         "dashboard": "Dashboard",
+        "kg_per_week": "kg/week",
         "language": "Language",
         "date": "Date",
         "days": "days",
@@ -109,6 +114,9 @@ TEXTS = {
         "open_menu": "Open navigation menu",
         "other": "Other",
         "password": "Password",
+        "register": "Register",
+        "create_account": "Create account",
+        "have_account": "Already have an account?",
         "personal_dashboard": "Personal dashboard",
         "personal_settings": "Personal settings",
         "previous_month": "Previous month",
@@ -131,6 +139,11 @@ TEXTS = {
         "incorrect_password": "Incorrect password.",
         "username": "Username",
         "profile_saved": "Profile saved.",
+        "user_already_exists": "That username already exists.",
+        "user_created": "Account created. You can log in now.",
+        "invalid_username": "Use 3-32 letters, numbers, dashes, or underscores.",
+        "invalid_password": "Password is required.",
+        "complete_profile_first": "Complete your profile before using the app.",
         "weight_logged": "Weight logged.",
     },
     "tr": {
@@ -149,6 +162,7 @@ TEXTS = {
         "body_weight": "Vücut ağırlığı",
         "burned": "Yakılan",
         "calendar_month": "Takvim ayı",
+        "calculated_basal": "Hesaplanan bazal",
         "calorie_deficit_calendar": "Kalori açığı takvimi",
         "calorie_deficit_trend": "Kalori açığı trendi",
         "calorie_trend_chart": "Kalori trend grafiği",
@@ -181,6 +195,7 @@ TEXTS = {
         "goal_weight": "Hedef kilo",
         "height": "Boy",
         "high": "Yüksek",
+        "kg_per_week": "kg/hafta",
         "language": "Dil",
         "last_days": "Son {days} gün",
         "log_out": "Çıkış",
@@ -202,6 +217,9 @@ TEXTS = {
         "open_menu": "Navigasyon menüsünü aç",
         "other": "Diğer",
         "password": "Şifre",
+        "register": "Kayıt ol",
+        "create_account": "Hesap oluştur",
+        "have_account": "Zaten hesabın var mı?",
         "personal_dashboard": "Kişisel dashboard",
         "personal_settings": "Kişisel ayarlar",
         "previous_month": "Önceki ay",
@@ -224,6 +242,11 @@ TEXTS = {
         "incorrect_password": "Kullanıcı adı veya şifre yanlış.",
         "username": "Kullanıcı adı",
         "profile_saved": "Profil kaydedildi.",
+        "user_already_exists": "Bu kullanıcı adı zaten var.",
+        "user_created": "Hesap oluşturuldu. Şimdi giriş yapabilirsin.",
+        "invalid_username": "3-32 harf, rakam, tire veya alt çizgi kullan.",
+        "invalid_password": "Şifre zorunlu.",
+        "complete_profile_first": "Uygulamayı kullanmadan önce profilini tamamla.",
         "weight_logged": "Kilo kaydedildi.",
     },
 }
@@ -260,6 +283,7 @@ def create_app(
     repository: DietRepository | MemoryDietRepository | None = None,
 ) -> Flask:
     settings = settings or get_settings()
+    _validate_runtime_settings(settings)
     app = Flask(__name__, static_folder="../../static", template_folder="../../templates")
     app.config["SECRET_KEY"] = settings.flask_secret_key
     app.config["MAX_CONTENT_LENGTH"] = settings.max_upload_bytes
@@ -269,6 +293,10 @@ def create_app(
     repo = repository or (MemoryDietRepository() if settings.use_memory_repository else DietRepository(settings))
 
     register_mcp(app, repo, settings)
+
+    @app.template_filter("short_date")
+    def short_date(value: str) -> str:
+        return _short_date(value, lang=_current_lang())
 
     @app.context_processor
     def inject_globals() -> dict[str, Any]:
@@ -281,27 +309,55 @@ def create_app(
             "chart_text": chart_text,
             "lang": lang,
             "t": text,
-            "username": settings.single_user_id,
+            "username": _current_user_id(settings),
         }
 
-    @app.template_filter("short_date")
-    def short_date(value: str) -> str:
-        return _short_date(value, lang=_current_lang())
+    @app.before_request
+    def load_preferred_language() -> None:
+        if session.get("lang") in TEXTS or request.endpoint in {"static", "uploaded_file", "mcp"}:
+            return
+        if not session.get("user_id"):
+            if not settings.use_memory_repository or settings.app_password or settings.app_password_hash:
+                return
+            session["authenticated"] = True
+            session["user_id"] = settings.single_user_id
+        profile = _profile_with_bmr(repo.get_profile(_current_user_id(settings)))
+        preferred_language = str(profile.get("preferred_language") or "")
+        if preferred_language in TEXTS:
+            session["lang"] = preferred_language
 
     @app.before_request
     def require_login() -> Any:
-        if not settings.app_password and not settings.app_password_hash:
+        if settings.use_memory_repository and not settings.app_password and not settings.app_password_hash:
             session["authenticated"] = True
-        if request.endpoint in {"login", "login_post", "set_language", "static", "uploaded_file", "mcp"}:
+            session.setdefault("user_id", _current_user_id(settings))
+        if request.endpoint in {
+            "login",
+            "login_post",
+            "register",
+            "register_post",
+            "set_language",
+            "static",
+            "uploaded_file",
+            "mcp",
+        }:
             return None
         if not session.get("authenticated"):
             return redirect(url_for("login", next=request.full_path))
+        if request.endpoint not in {"profile", "save_profile", "logout", "set_language"}:
+            profile = repo.get_profile(_current_user_id(settings))
+            if _profile_required(settings, profile) and not _profile_is_complete(profile):
+                flash(_t("complete_profile_first"), "error")
+                return redirect(url_for("profile"))
         return None
 
     @app.post("/language")
     def set_language() -> Any:
         lang = request.form.get("lang", "en")
-        session["lang"] = lang if lang in TEXTS else "en"
+        selected_lang = lang if lang in TEXTS else "en"
+        session["lang"] = selected_lang
+        if session.get("authenticated"):
+            repo.save_profile(_current_user_id(settings), {"preferred_language": selected_lang})
         next_url = request.form.get("next") or url_for("dashboard")
         if not next_url.startswith("/"):
             next_url = url_for("dashboard")
@@ -313,12 +369,48 @@ def create_app(
 
     @app.post("/login")
     def login_post() -> Any:
-        username = request.form.get("username", "").strip()
+        username = _normalize_user_id(request.form.get("username", ""))
         password = request.form.get("password", "")
-        if username == settings.single_user_id and _password_matches(settings, password):
+        profile = repo.get_profile(username) if username else {}
+        if _user_password_matches(settings, username, profile, password):
             session["authenticated"] = True
+            session["user_id"] = username
+            preferred_language = str(profile.get("preferred_language") or "")
+            if preferred_language in TEXTS:
+                session["lang"] = preferred_language
+            if _profile_required(settings, profile) and not _profile_is_complete(profile):
+                flash(_t("complete_profile_first"), "error")
+                return redirect(url_for("profile"))
             return redirect(request.args.get("next") or url_for("dashboard"))
         flash(_t("incorrect_password"), "error")
+        return redirect(url_for("login"))
+
+    @app.get("/register")
+    def register() -> str:
+        return render_template("register.html")
+
+    @app.post("/register")
+    def register_post() -> Any:
+        username = _normalize_user_id(request.form.get("username", ""))
+        password = request.form.get("password", "")
+        if not _valid_user_id(username):
+            flash(_t("invalid_username"), "error")
+            return redirect(url_for("register"))
+        if not password:
+            flash(_t("invalid_password"), "error")
+            return redirect(url_for("register"))
+        if repo.get_profile(username):
+            flash(_t("user_already_exists"), "error")
+            return redirect(url_for("register"))
+        repo.save_profile(
+            username,
+            {
+                "username": username,
+                "password_hash": generate_password_hash(password),
+                "preferred_language": _current_lang(),
+            },
+        )
+        flash(_t("user_created"), "success")
         return redirect(url_for("login"))
 
     @app.post("/logout")
@@ -333,17 +425,18 @@ def create_app(
     def dashboard() -> str:
         range_key = request.args.get("range", "14d")
         days = RANGE_OPTIONS.get(range_key, 14)
-        dates = date_window(days)
-        entries = repo.list_entries(settings.single_user_id, start_date=dates[0], end_date=dates[-1])
+        today = today_iso(settings.timezone)
+        dates = date_window(days, timezone_name=settings.timezone)
+        entries = repo.list_entries(_current_user_id(settings), start_date=dates[0], end_date=dates[-1])
         weights = repo.list_weight_logs(
-            settings.single_user_id,
+            _current_user_id(settings),
             start_date=dates[0],
             end_date=dates[-1],
         )
-        month = request.args.get("month") or today_iso()[:7]
-        month_dates = month_window(month)
+        month = request.args.get("month") or today[:7]
+        month_dates = month_window(month, timezone_name=settings.timezone)
         month_entries = repo.list_entries(
-            settings.single_user_id,
+            _current_user_id(settings),
             start_date=month_dates[0],
             end_date=month_dates[-1],
         )
@@ -364,28 +457,29 @@ def create_app(
             current_month=month,
             previous_month=_shift_month(month, -1),
             next_month=_shift_month(month, 1),
-            today=today_iso(),
+            today=today,
         )
 
     @app.get("/entry")
     def entry_form() -> str:
-        entry_date = request.args.get("date") or today_iso()
-        entry = repo.get_entry(settings.single_user_id, entry_date)
+        today = today_iso(settings.timezone)
+        entry_date = request.args.get("date") or today
+        entry = repo.get_entry(_current_user_id(settings), entry_date)
         return render_template(
             "entry.html",
             active_page="entry",
             entry=entry,
             entry_date=entry_date,
             food_groups=food_item_groups(entry.get("analysis") or {}),
-            today=today_iso(),
+            today=today,
         )
 
     @app.post("/entry")
     def save_entry() -> Any:
-        entry_date = request.form.get("date") or today_iso()
+        entry_date = request.form.get("date") or today_iso(settings.timezone)
         diary_text = request.form.get("diary_text", "").strip()
-        profile = repo.get_profile(settings.single_user_id)
-        old_entry = repo.get_entry(settings.single_user_id, entry_date)
+        profile = repo.get_profile(_current_user_id(settings))
+        old_entry = repo.get_entry(_current_user_id(settings), entry_date)
         image_paths, image_urls = _save_uploads(request.files.getlist("images"), settings)
         language = _current_lang()
 
@@ -397,8 +491,9 @@ def create_app(
             image_paths=image_paths,
             language=language,
         )
+
         repo.save_entry(
-            settings.single_user_id,
+            _current_user_id(settings),
             entry_date,
             {
                 "diary_text": diary_text,
@@ -412,28 +507,44 @@ def create_app(
 
     @app.get("/weight")
     def weight() -> str:
-        end_date = today_iso()
-        start_date = (date.today() - timedelta(days=90)).isoformat()
+        end = local_date(settings.timezone)
+        end_date = end.isoformat()
+        start_date = (end - timedelta(days=90)).isoformat()
         weight_logs = repo.list_weight_logs(
-            settings.single_user_id,
+            _current_user_id(settings),
             start_date=start_date,
             end_date=end_date,
+        )
+        recent_weight_logs = list(reversed(weight_logs))
+        profile = repo.get_profile(_current_user_id(settings))
+        current_weight = (
+            recent_weight_logs[0].get("weight_kg")
+            if recent_weight_logs
+            else profile.get("weight_kg")
         )
         return render_template(
             "weight.html",
             active_page="weight",
             today=end_date,
-            weight_logs=list(reversed(weight_logs)),
+            current_weight=current_weight,
+            weight_logs=recent_weight_logs,
         )
 
     @app.post("/weight")
     def save_weight() -> Any:
-        entry_date = request.form.get("date") or today_iso()
+        entry_date = request.form.get("date") or today_iso(settings.timezone)
         weight_text = request.form.get("weight_kg", "").strip()
         if not weight_text:
             flash(_t("enter_weight"), "error")
             return redirect(url_for("weight"))
-        repo.save_weight(settings.single_user_id, entry_date, float(weight_text))
+        weight_kg = _required_float(weight_text)
+        profile = repo.get_profile(_current_user_id(settings))
+        profile["weight_kg"] = weight_kg
+        repo.save_weight(_current_user_id(settings), entry_date, weight_kg)
+        repo.save_profile(
+            _current_user_id(settings),
+            {"bmr_calories": compute_bmr_calories(profile, use_stored=False)},
+        )
         flash(_t("weight_logged"), "success")
         return redirect(url_for("weight"))
 
@@ -442,8 +553,8 @@ def create_app(
         return render_template(
             "profile.html",
             active_page="profile",
-            profile=repo.get_profile(settings.single_user_id),
-            today=today_iso(),
+            profile=_profile_with_bmr(repo.get_profile(_current_user_id(settings))),
+            today=today_iso(settings.timezone),
         )
 
     @app.post("/profile")
@@ -458,11 +569,16 @@ def create_app(
             "activity_level": request.form.get("activity_level", "moderate"),
             "goal": request.form.get("goal", "fat_loss"),
         }
-        repo.save_profile(settings.single_user_id, payload)
+        payload["bmr_calories"] = compute_bmr_calories(payload, use_stored=False)
+        payload["profile_complete"] = _profile_is_complete(payload)
+        repo.save_profile(_current_user_id(settings), payload)
         if payload["weight_kg"]:
-            repo.save_weight(settings.single_user_id, today_iso(), float(payload["weight_kg"]))
+            repo.save_weight(_current_user_id(settings), today_iso(settings.timezone), float(payload["weight_kg"]))
+        if not payload["profile_complete"]:
+            flash(_t("complete_profile_first"), "error")
+            return redirect(url_for("profile"))
         flash(_t("profile_saved"), "success")
-        return redirect(url_for("profile"))
+        return redirect(url_for("dashboard"))
 
     @app.get("/uploads/<path:filename>")
     def uploaded_file(filename: str) -> Any:
@@ -480,12 +596,28 @@ def _save_uploads(files: list[FileStorage], settings: Settings) -> tuple[list[Pa
         extension = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
         if extension not in settings.allowed_upload_extensions:
             continue
+        if not _has_valid_image_signature(file, extension):
+            continue
         filename = f"{secrets.token_hex(8)}-{secure_filename(file.filename)}"
         path = settings.upload_dir / filename
         file.save(path)
         saved_paths.append(path)
         urls.append(url_for("uploaded_file", filename=filename))
     return saved_paths, urls
+
+
+def _has_valid_image_signature(file: FileStorage, extension: str) -> bool:
+    stream = file.stream
+    position = stream.tell()
+    header = stream.read(16)
+    stream.seek(position)
+    if extension in {"jpg", "jpeg"}:
+        return header.startswith(b"\xff\xd8\xff")
+    if extension == "png":
+        return header.startswith(b"\x89PNG\r\n\x1a\n")
+    if extension == "webp":
+        return header.startswith(b"RIFF") and header[8:12] == b"WEBP"
+    return False
 
 
 def _delete_uploaded_files(urls: list[str], settings: Settings) -> None:
@@ -504,6 +636,13 @@ def _delete_uploaded_files(urls: list[str], settings: Settings) -> None:
             pass
 
 
+def _validate_runtime_settings(settings: Settings) -> None:
+    if settings.app_env.lower() not in {"prod", "production"}:
+        return
+    if settings.flask_secret_key == "change-me-in-prod":
+        raise RuntimeError("FLASK_SECRET_KEY must be set to a secure value in production.")
+
+
 def _current_lang() -> str:
     lang = str(session.get("lang") or "en")
     return lang if lang in TEXTS else "en"
@@ -512,6 +651,47 @@ def _current_lang() -> str:
 def _t(key: str) -> str:
     lang = _current_lang()
     return TEXTS[lang].get(key, TEXTS["en"].get(key, key))
+
+
+def _current_user_id(settings: Settings) -> str:
+    return str(session.get("user_id") or settings.single_user_id)
+
+
+def _normalize_user_id(value: str) -> str:
+    return value.strip().lower()
+
+
+def _valid_user_id(value: str) -> bool:
+    return bool(re.fullmatch(r"[a-z0-9_-]{3,32}", value))
+
+
+def _user_password_matches(
+    settings: Settings,
+    username: str,
+    profile: dict[str, Any],
+    password: str,
+) -> bool:
+    password_hash = str(profile.get("password_hash") or "")
+    if password_hash:
+        return _hash_matches(password_hash, password)
+    return username == settings.single_user_id and _password_matches(settings, password)
+
+
+def _profile_required(settings: Settings, profile: dict[str, Any]) -> bool:
+    return bool(profile.get("password_hash") or settings.app_password or settings.app_password_hash)
+
+
+def _profile_is_complete(profile: dict[str, Any]) -> bool:
+    return all(
+        [
+            profile.get("age"),
+            profile.get("gender"),
+            profile.get("height_cm"),
+            profile.get("weight_kg"),
+            profile.get("activity_level"),
+            profile.get("goal"),
+        ]
+    )
 
 
 def _trend_series(dates: list[str], entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -528,6 +708,7 @@ def _trend_series(dates: list[str], entries: list[dict[str, Any]]) -> list[dict[
                 "date": date_key,
                 "has_data": True,
                 "food": int(analysis.get("food_calories") or 0),
+                "basal": _analysis_basal(analysis),
                 "burned": int(analysis.get("burned_calories") or 0),
                 "activity": int(analysis.get("activity_calories") or 0),
                 "deficit": int(analysis.get("calorie_deficit") or 0),
@@ -646,10 +827,11 @@ def _short_date(value: str, *, lang: str = "en") -> str:
 
 
 def _totals(entries: list[dict[str, Any]]) -> dict[str, int]:
-    totals = {"food": 0, "burned": 0, "activity": 0, "deficit": 0}
+    totals = {"food": 0, "basal": 0, "burned": 0, "activity": 0, "deficit": 0}
     for entry in entries:
         analysis = entry.get("analysis") or {}
         totals["food"] += int(analysis.get("food_calories") or 0)
+        totals["basal"] += _analysis_basal(analysis)
         totals["burned"] += int(analysis.get("burned_calories") or 0)
         totals["activity"] += int(analysis.get("activity_calories") or 0)
         totals["deficit"] += int(analysis.get("calorie_deficit") or 0)
@@ -666,8 +848,9 @@ def _balance_summary(averages: dict[str, int]) -> dict[str, Any]:
     food = max(int(averages.get("food") or 0), 0)
     burned = max(int(averages.get("burned") or 0), 0)
     activity = max(int(averages.get("activity") or 0), 0)
-    basal = max(burned - activity, 0)
+    basal = max(int(averages.get("basal") or burned - activity), 0)
     deficit = int(averages.get("deficit") or burned - food)
+    weekly_kg = deficit * 7 / 7700
     max_value = max(food, burned, 1)
 
     return {
@@ -677,12 +860,30 @@ def _balance_summary(averages: dict[str, int]) -> dict[str, Any]:
         "basal": basal,
         "deficit": deficit,
         "deficit_abs": abs(deficit),
+        "weekly_kg": weekly_kg,
+        "weekly_kg_abs": abs(weekly_kg),
+        "weekly_kg_display": f"{abs(weekly_kg):.1f}",
+        "weekly_kg_is_loss": weekly_kg >= 0,
         "balance_label": "Deficit" if deficit >= 0 else "Surplus",
         "food_pct": round(food / max_value * 100),
         "burned_pct": round(burned / max_value * 100),
         "basal_pct": round(basal / max_value * 100),
         "activity_pct": round(min(activity, burned) / max_value * 100),
     }
+
+
+def _analysis_basal(analysis: dict[str, Any]) -> int:
+    if analysis.get("bmr_calories"):
+        return int(analysis.get("bmr_calories") or 0)
+    burned = int(analysis.get("burned_calories") or 0)
+    activity = int(analysis.get("activity_calories") or 0)
+    return max(burned - activity, 0)
+
+
+def _profile_with_bmr(profile: dict[str, Any]) -> dict[str, Any]:
+    if profile.get("bmr_calories"):
+        return profile
+    return {**profile, "bmr_calories": compute_bmr_calories(profile)}
 
 
 def _optional_int(value: str | None) -> int | None:
@@ -694,15 +895,23 @@ def _optional_int(value: str | None) -> int | None:
 def _optional_float(value: str | None) -> float | None:
     if not value:
         return None
-    return float(value)
+    return _required_float(value)
+
+
+def _required_float(value: str) -> float:
+    return float(value.strip().replace(",", "."))
 
 
 def _password_matches(settings: Settings, password: str) -> bool:
-    if settings.app_password_hash.startswith("scrypt$"):
-        return _wealth_tracker_password_matches(settings.app_password_hash, password)
     if settings.app_password_hash:
-        return check_password_hash(settings.app_password_hash, password)
+        return _hash_matches(settings.app_password_hash, password)
     return not settings.app_password or password == settings.app_password
+
+
+def _hash_matches(stored: str, password: str) -> bool:
+    if stored.startswith("scrypt$"):
+        return _wealth_tracker_password_matches(stored, password)
+    return check_password_hash(stored, password)
 
 
 def _wealth_tracker_password_matches(stored: str, password: str) -> bool:

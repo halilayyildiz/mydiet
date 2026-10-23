@@ -26,6 +26,7 @@ class FoodItem(BaseModel):
 class DayAnalysis(BaseModel):
     food_calories: float
     food_items: list[FoodItem]
+    bmr_calories: float
     activity_calories: float
     burned_calories: float
     calorie_deficit: float

@@ -13,6 +13,7 @@
     class="profile-grid"
     method="post"
     data-loading-form
+    data-bmr-form
     data-loading-message="{{ t.saving_profile }}"
   >
     <div class="form-status" data-loading-status hidden>
@@ -25,39 +26,43 @@
     </label>
     <label>
       {{ t.age }}
-      <input type="number" name="age" value="{{ profile.age or '' }}" min="1" max="120">
+      <input type="number" name="age" value="{{ profile.age or '' }}" min="1" max="120" required>
     </label>
     <label>
       {{ t.gender }}
-      <select name="gender">
+      <select name="gender" required>
         {% for value, label in [('male', t.male), ('female', t.female), ('other', t.other)] %}
           <option value="{{ value }}" {{ 'selected' if profile.gender == value else '' }}>{{ label }}</option>
         {% endfor %}
       </select>
     </label>
     <label>
-      <span>{{ t.height }} <small>(cm)</small></span>
-      <input type="number" name="height_cm" value="{{ profile.height_cm or '' }}" min="80" max="240">
+      {{ t.height }} (cm)
+      <input type="number" name="height_cm" value="{{ profile.height_cm or '' }}" min="80" max="240" required>
     </label>
     <label>
-      <span>{{ t.current_weight }} <small>(kg)</small></span>
-      <input type="number" name="weight_kg" value="{{ profile.weight_kg or '' }}" step="0.1" min="20" max="300">
+      {{ t.current_weight }} (kg)
+      <input type="text" name="weight_kg" value="{{ profile.weight_kg or '' }}" inputmode="decimal" pattern="[0-9]+([\.,][0-9]+)?" required>
     </label>
     <label>
-      <span>{{ t.goal_weight }} <small>(kg)</small></span>
-      <input type="number" name="goal_weight_kg" value="{{ profile.goal_weight_kg or '' }}" step="0.1" min="20" max="300">
+      {{ t.goal_weight }} (kg)
+      <input type="text" name="goal_weight_kg" value="{{ profile.goal_weight_kg or '' }}" inputmode="decimal" pattern="[0-9]+([\.,][0-9]+)?">
     </label>
     <label>
       {{ t.activity_level }}
-      <select name="activity_level">
+      <select name="activity_level" required>
         {% for value, label in [('low', t.low), ('moderate', t.moderate), ('high', t.high)] %}
           <option value="{{ value }}" {{ 'selected' if profile.activity_level == value else '' }}>{{ label }}</option>
         {% endfor %}
       </select>
     </label>
+    <div class="profile-bmr-preview" aria-live="polite">
+      <span>{{ t.calculated_basal }}</span>
+      <strong><span data-bmr-preview>{{ profile.bmr_calories or 0 }}</span> kcal</strong>
+    </div>
     <label>
       {{ t.goal }}
-      <select name="goal">
+      <select name="goal" required>
         {% for value, label in [('fat_loss', t.fat_loss), ('maintenance', t.maintenance), ('muscle_gain', t.muscle_gain)] %}
           <option value="{{ value }}" {{ 'selected' if profile.goal == value else '' }}>{{ label }}</option>
         {% endfor %}

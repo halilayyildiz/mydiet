@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 RANGE_OPTIONS = {
@@ -9,6 +10,12 @@ RANGE_OPTIONS = {
     "14d": 14,
     "30d": 30,
     "90d": 90,
+}
+
+BMR_ACTIVITY_MULTIPLIERS = {
+    "low": 1.1,
+    "moderate": 1.25,
+    "high": 1.45,
 }
 
 MEAL_GROUPS = [
@@ -25,18 +32,32 @@ def parse_iso_date(value: str | None, *, default: date | None = None) -> date:
     return date.fromisoformat(value)
 
 
-def today_iso() -> str:
-    return date.today().isoformat()
+def local_date(timezone_name: str | None = None) -> date:
+    if not timezone_name:
+        return date.today()
+    try:
+        return datetime.now(ZoneInfo(timezone_name)).date()
+    except ZoneInfoNotFoundError:
+        return date.today()
 
 
-def date_window(days: int, *, end: date | None = None) -> list[str]:
-    end_date = end or date.today()
+def today_iso(timezone_name: str | None = None) -> str:
+    return local_date(timezone_name).isoformat()
+
+
+def date_window(
+    days: int,
+    *,
+    end: date | None = None,
+    timezone_name: str | None = None,
+) -> list[str]:
+    end_date = end or local_date(timezone_name)
     start = end_date - timedelta(days=days - 1)
     return [(start + timedelta(days=offset)).isoformat() for offset in range(days)]
 
 
-def month_window(month: str | None = None) -> list[str]:
-    base = date.today()
+def month_window(month: str | None = None, *, timezone_name: str | None = None) -> list[str]:
+    base = local_date(timezone_name)
     if month:
         base = date.fromisoformat(f"{month}-01")
     first = base.replace(day=1)
@@ -52,6 +73,7 @@ def normalize_analysis(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "food_calories": _number(payload.get("food_calories")),
         "food_items": _food_items(payload.get("food_items")),
+        "bmr_calories": _number(payload.get("bmr_calories")),
         "activity_calories": _number(payload.get("activity_calories")),
         "burned_calories": _number(payload.get("burned_calories")),
         "calorie_deficit": _number(payload.get("calorie_deficit")),
@@ -83,16 +105,18 @@ def fallback_analysis(
     reason: str = "Set ANTHROPIC_API_KEY to calculate from diary text and images.",
     language: str = "en",
 ) -> dict[str, Any]:
+    bmr = compute_bmr_calories(profile)
     food = _rough_food_calories(diary_text)
     food_items = _rough_food_items(diary_text, food)
     activity = _rough_activity_calories(diary_text)
-    burned = estimated_burned_calories(profile, activity)
+    burned = round(max(bmr + activity, 1200))
     summary = "Saved without Claude analysis. Values are rough placeholders."
     if language == "tr":
         summary = "Claude analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
     return {
         "food_calories": food,
         "food_items": food_items,
+        "bmr_calories": bmr,
         "activity_calories": activity,
         "burned_calories": burned,
         "calorie_deficit": burned - food,
@@ -103,6 +127,20 @@ def fallback_analysis(
         "summary": summary,
         "assumptions": [reason],
     }
+
+
+def compute_bmr_calories(profile: dict[str, Any], *, use_stored: bool = True) -> int:
+    stored_bmr = _number(profile.get("bmr_calories"))
+    if use_stored and stored_bmr:
+        return stored_bmr
+    weight = _float(profile.get("weight_kg")) or 80
+    height = _float(profile.get("height_cm")) or 175
+    age = _float(profile.get("age")) or 35
+    gender = str(profile.get("gender") or "").lower()
+    raw_bmr = 10 * weight + 6.25 * height - 5 * age + (5 if gender == "male" else -161)
+    activity_level = str(profile.get("activity_level") or "low").lower()
+    multiplier = BMR_ACTIVITY_MULTIPLIERS.get(activity_level, BMR_ACTIVITY_MULTIPLIERS["low"])
+    return round(raw_bmr * multiplier)
 
 
 def analysis_from_items(
@@ -118,10 +156,12 @@ def analysis_from_items(
     items = _food_items(food_items)
     food = sum(item["calories"] for item in items)
     activity = _number(activity_calories)
-    burned = _number(burned_calories) or estimated_burned_calories(profile, activity)
+    bmr = compute_bmr_calories(profile)
+    burned = _number(burned_calories) or round(max(bmr + activity, 1200))
     return {
         "food_calories": food,
         "food_items": items,
+        "bmr_calories": bmr,
         "activity_calories": activity,
         "burned_calories": burned,
         "calorie_deficit": burned - food,
@@ -134,16 +174,6 @@ def analysis_from_items(
     }
 
 
-def estimated_burned_calories(profile: dict[str, Any], activity_calories: int) -> int:
-    """Mifflin-St Jeor BMR with a light-activity factor, plus logged exercise."""
-    weight = _number(profile.get("weight_kg")) or 80
-    height = _number(profile.get("height_cm")) or 175
-    age = _number(profile.get("age")) or 35
-    gender = str(profile.get("gender") or "").lower()
-    bmr = 10 * weight + 6.25 * height - 5 * age + (5 if gender == "male" else -161)
-    return round(max(bmr * 1.25 + activity_calories, 1200))
-
-
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -153,6 +183,15 @@ def _number(value: Any) -> int:
         return 0
     try:
         return int(round(float(value)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _float(value: Any) -> float:
+    if value in {None, ""}:
+        return 0
+    try:
+        return float(value)
     except (TypeError, ValueError):
         return 0
 

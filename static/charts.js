@@ -123,7 +123,7 @@
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
     const baseY = height - pad.bottom;
-    const ticks = [niceMax, Math.round(niceMax / 2), 0];
+    const ticks = Array.from({ length: niceMax / 500 + 1 }, (_, index) => index * 500).reverse();
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
     const grid = ticks
@@ -177,18 +177,14 @@
         const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, 0, niceMax);
         const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, 0, niceMax);
         const burned = Number(row.burned || 0);
-        const activity = Math.min(Number(row.activity || 0), burned);
-        const basal = Math.max(burned - activity, 0);
         return {
           index: sourceIndex,
           x: burnedPoint.x,
           y: Math.min(burnedPoint.y, foodPoint.y),
           html: `
             <strong>${escapeHtml(row.date)}</strong>
-            <span><i style="background:${colors.food}"></i>${escapeHtml(text.consumed)} ${formatValue(row.food)} kcal</span>
             <span><i style="background:${colors.burned}"></i>${escapeHtml(text.burned)} ${formatValue(burned)} kcal</span>
-            <span><i style="background:${colors.burned}"></i>${escapeHtml(text.basal)} ${formatValue(basal)} kcal</span>
-            <span><i style="background:${colors.activity}"></i>${escapeHtml(text.activity)} ${formatValue(row.activity)} kcal</span>
+            <span><i style="background:${colors.food}"></i>${escapeHtml(text.consumed)} ${formatValue(row.food)} kcal</span>
           `,
         };
       });
@@ -229,13 +225,13 @@
 
     const values = plotRows.map((row) => Number(row.activity || 0));
     const maxValue = Math.max(...values, 100);
-    const niceMax = Math.ceil(maxValue / 100) * 100;
+    const niceMax = Math.ceil(maxValue / 200) * 200;
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
     const baseY = height - pad.bottom;
     const slot = chartWidth / Math.max(rows.length, 1);
     const barWidth = Math.max(8, Math.min(24, slot * 0.52));
-    const ticks = [niceMax, Math.round(niceMax / 2), 0];
+    const ticks = Array.from({ length: niceMax / 200 + 1 }, (_, index) => index * 200).reverse();
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
     const grid = ticks
@@ -398,9 +394,9 @@
     const values = plotRows.map((row) => Number(row.weight));
     const rawMin = Math.min(...values);
     const rawMax = Math.max(...values);
-    const min = Math.floor((rawMin - 1) / 5) * 5;
-    const max = Math.ceil((rawMax + 1) / 5) * 5;
-    const ticks = [max, Math.round((max + min) / 2), min];
+    const min = Math.floor(rawMin - 1);
+    const max = Math.ceil(rawMax + 1);
+    const ticks = Array.from({ length: max - min + 1 }, (_, index) => max - index);
     const labelEvery = Math.max(1, Math.ceil(rows.length / 6));
     const linePath = plotRows
       .map((row, pathIndex) => {

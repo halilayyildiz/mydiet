@@ -51,6 +51,19 @@ class DietRepository:
     def list_entries(self, user_id: str, *, start_date: str, end_date: str) -> list[dict[str, Any]]:
         return self._range("daily_entries", user_id, start_date, end_date)
 
+    def list_all_entries(self, user_id: str) -> list[dict[str, Any]]:
+        return self._range("daily_entries", user_id, "0000-00-00", "9999-99-99")
+
+    def update_entry_analysis(self, user_id: str, entry_date: str, analysis: dict[str, Any]) -> None:
+        entry = self.get_entry(user_id, entry_date)
+        entry.pop("id", None)
+        self._put(
+            "daily_entries",
+            user_id,
+            entry_date,
+            {**entry, "date": entry_date, "analysis": analysis, "updated_at": _iso_now()},
+        )
+
     def list_weight_logs(self, user_id: str, *, start_date: str, end_date: str) -> list[dict[str, Any]]:
         return self._range("weight_logs", user_id, start_date, end_date)
 
@@ -107,23 +120,25 @@ def _dumps(data: dict[str, Any]) -> str:
 
 class MemoryDietRepository:
     def __init__(self) -> None:
-        self.profile: dict[str, Any] = {}
-        self.entries: dict[str, dict[str, Any]] = {}
-        self.weights: dict[str, dict[str, Any]] = {}
+        self.profiles: dict[str, dict[str, Any]] = {}
+        self.entries_by_user: dict[str, dict[str, dict[str, Any]]] = {}
+        self.weights_by_user: dict[str, dict[str, dict[str, Any]]] = {}
 
     def get_profile(self, user_id: str) -> dict[str, Any]:
-        return dict(self.profile)
+        return dict(self.profiles.get(user_id, {}))
 
     def save_profile(self, user_id: str, payload: dict[str, Any]) -> None:
-        self.profile.update(payload)
-        self.profile["updated_at"] = _iso_now()
+        profile = self.profiles.setdefault(user_id, {})
+        profile.update(payload)
+        profile["updated_at"] = _iso_now()
 
     def get_entry(self, user_id: str, entry_date: str) -> dict[str, Any]:
-        data = self.entries.get(entry_date, {})
+        data = self.entries_by_user.get(user_id, {}).get(entry_date, {})
         return dict(data)
 
     def save_entry(self, user_id: str, entry_date: str, payload: dict[str, Any]) -> None:
-        self.entries[entry_date] = {
+        entries = self.entries_by_user.setdefault(user_id, {})
+        entries[entry_date] = {
             **payload,
             "date": entry_date,
             "updated_at": _iso_now(),
@@ -132,19 +147,32 @@ class MemoryDietRepository:
     def list_entries(self, user_id: str, *, start_date: str, end_date: str) -> list[dict[str, Any]]:
         return [
             dict(entry)
-            for date_key, entry in sorted(self.entries.items())
+            for date_key, entry in sorted(self.entries_by_user.get(user_id, {}).items())
             if start_date <= date_key <= end_date
         ]
+
+    def list_all_entries(self, user_id: str) -> list[dict[str, Any]]:
+        return [
+            {**dict(entry), "id": date_key, "date": entry.get("date") or date_key}
+            for date_key, entry in sorted(self.entries_by_user.get(user_id, {}).items())
+        ]
+
+    def update_entry_analysis(self, user_id: str, entry_date: str, analysis: dict[str, Any]) -> None:
+        entries = self.entries_by_user.setdefault(user_id, {})
+        entry = entries.setdefault(entry_date, {"date": entry_date})
+        entry["analysis"] = analysis
+        entry["updated_at"] = _iso_now()
 
     def list_weight_logs(self, user_id: str, *, start_date: str, end_date: str) -> list[dict[str, Any]]:
         return [
             dict(log)
-            for date_key, log in sorted(self.weights.items())
+            for date_key, log in sorted(self.weights_by_user.get(user_id, {}).items())
             if start_date <= date_key <= end_date
         ]
 
     def save_weight(self, user_id: str, entry_date: str, weight_kg: float) -> None:
-        self.weights[entry_date] = {
+        weights = self.weights_by_user.setdefault(user_id, {})
+        weights[entry_date] = {
             "date": entry_date,
             "weight_kg": weight_kg,
             "updated_at": _iso_now(),

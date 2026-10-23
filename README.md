@@ -56,6 +56,17 @@ The secret path is the only credential, so keep the URL private.
 SQLite at `MYDIET_DB` (default `data/mydiet.db`): tables `profiles`, `daily_entries` and `weight_logs`,
 each row a JSON document keyed by user and `YYYY-MM-DD`.
 
+## Maintenance
+
+Backfill old daily entries after changing the profile-based basal burn formula:
+
+```bash
+mydiet-backfill-bmr --user halil
+mydiet-backfill-bmr --user halil --apply
+```
+
+The first command is a dry run and does not write to the database.
+
 ## Deployment
 
 Runs on the same Ubuntu server as Wealth Tracker: gunicorn on `127.0.0.1:8080` as the `mydiet`

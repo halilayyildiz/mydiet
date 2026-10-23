@@ -89,8 +89,8 @@ def test_save_day_estimates_burned_calories_from_profile() -> None:
         "save_day",
         {"diary_text": "x", "food_items": [], "activity_calories": 200, "date": "2026-10-23"},
     )
-    # BMR 1830 * 1.25 + 200
-    assert repo.get_entry("halil", "2026-10-23")["analysis"]["burned_calories"] == 2488
+    # BMR 1830 * 1.1 (low activity) + 200
+    assert repo.get_entry("halil", "2026-10-23")["analysis"]["burned_calories"] == 2213
 
 
 def test_bad_date_is_a_tool_error() -> None:

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
+
+import pytest
 
 from mydiet.app import (
     _balance_summary,
@@ -28,7 +31,7 @@ def test_dashboard_renders_with_memory_repository() -> None:
     assert b'class="nav-menu"' not in response.data
     assert b"Open navigation menu" not in response.data
     assert b'<span>halil</span>' in response.data
-    assert b'class="account-menu"' in response.data
+    assert b'class="header-menu account-menu"' in response.data
     assert b">Profile</a>" in response.data
     assert b"data-menu-close" not in response.data
     assert b"/static/nav.js" not in response.data
@@ -36,7 +39,8 @@ def test_dashboard_renders_with_memory_repository() -> None:
 
 
 def test_language_switch_renders_turkish_ui() -> None:
-    app = create_app(settings=_settings(), repository=MemoryDietRepository())
+    repo = MemoryDietRepository()
+    app = create_app(settings=_settings(), repository=repo)
 
     response = app.test_client().post(
         "/language",
@@ -51,8 +55,22 @@ def test_language_switch_renders_turkish_ui() -> None:
     assert b"<span>halil</span>" in response.data
     assert "Profil".encode() in response.data
     assert "Çıkış".encode() in response.data
-    assert b'<select name="lang"' in response.data
-    assert b'<option value="tr" selected>TR</option>' in response.data
+    assert b'class="header-menu language-menu"' in response.data
+    assert b'<span>TR</span>' in response.data
+    assert b'class="active" type="submit" name="lang" value="tr">TR</button>' in response.data
+    assert repo.get_profile("halil")["preferred_language"] == "tr"
+
+
+def test_dashboard_uses_saved_language_preference() -> None:
+    repo = MemoryDietRepository()
+    repo.save_profile("halil", {"preferred_language": "tr"})
+    app = create_app(settings=_settings(), repository=repo)
+
+    response = app.test_client().get("/")
+
+    assert response.status_code == 200
+    assert b'<html lang="tr">' in response.data
+    assert "Günlük kalori dengesi".encode() in response.data
 
 
 def test_dashboard_shows_entry_day_energy_balance() -> None:
@@ -65,6 +83,7 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
             "image_urls": [],
             "analysis": {
                 "food_calories": 1400,
+                "bmr_calories": 1750,
                 "burned_calories": 2800,
                 "activity_calories": 700,
                 "calorie_deficit": 1400,
@@ -73,21 +92,32 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     )
     app = create_app(settings=_settings(), repository=repo)
 
-    response = app.test_client().get("/?range=14d")
+    response = app.test_client().get("/?range=30d")
 
     assert response.status_code == 200
     assert b"Energy balance" in response.data
+    assert b'<div class="balance-result">' in response.data
+    assert b"<strong>1.3</strong>" in response.data
+    assert b"<small>kg/week</small>" in response.data
     assert b"Eaten" in response.data
     assert b"1400 kcal" in response.data
     assert b"Burned" in response.data
-    assert b"Basal 2100 kcal" in response.data
+    assert response.data.index(b'<i class="swatch burned"></i>Burned') < response.data.index(
+        b'<i class="swatch food"></i>Consumed'
+    )
+    assert b"Basal 1750 kcal" in response.data
     assert b"Activity 700 kcal" in response.data
     assert b"Deficit" in response.data
     assert b"recorded days" in response.data
     assert b'<div id="calorieChart" class="svg-chart"' in response.data
     assert b"Activity trend" in response.data
+    assert b'class="panel-average-stat activity"' in response.data
+    assert b"<strong>700</strong>" in response.data
     assert b'<div id="activityChart" class="svg-chart"' in response.data
     assert b"Calorie deficit trend" in response.data
+    assert b'class="panel-average-stat positive"' in response.data
+    assert b"<strong>1400</strong>" in response.data
+    assert b"<small>kcal/day</small>" in response.data
     assert b'<div id="deficitChart" class="svg-chart"' in response.data
     assert b"Update weight" in response.data
 
@@ -96,6 +126,7 @@ def test_balance_summary_builds_bar_segments() -> None:
     summary = _balance_summary(
         {
             "food": 1400,
+            "basal": 1750,
             "burned": 2800,
             "activity": 700,
             "deficit": 1400,
@@ -104,10 +135,12 @@ def test_balance_summary_builds_bar_segments() -> None:
 
     assert summary["balance_label"] == "Deficit"
     assert summary["deficit_abs"] == 1400
+    assert summary["weekly_kg_display"] == "1.3"
+    assert summary["weekly_kg_is_loss"] is True
     assert summary["food_pct"] == 50
     assert summary["burned_pct"] == 100
-    assert summary["basal"] == 2100
-    assert summary["basal_pct"] == 75
+    assert summary["basal"] == 1750
+    assert summary["basal_pct"] == 62
     assert summary["activity_pct"] == 25
 
 
@@ -117,12 +150,12 @@ def test_dashboard_weight_series_uses_selected_range() -> None:
     repo.save_weight("halil", "2026-06-13", 82.4)
     app = create_app(settings=_settings(), repository=repo)
 
-    response = app.test_client().get("/?range=14d")
+    response = app.test_client().get("/?range=30d")
 
     assert response.status_code == 200
     assert b'"weight": 82.4' in response.data
     assert b'"weight": 90.0' not in response.data
-    assert f'"date": "{date_window(14)[0]}"'.encode() in response.data
+    assert f'"date": "{date_window(30)[0]}"'.encode() in response.data
 
 
 def test_dashboard_calendar_has_month_navigation() -> None:
@@ -138,9 +171,10 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20261023-3" in response.data
-    assert b"/static/charts.js?v=20261023-3" in response.data
-    assert b"/static/dashboard.js?v=20261023-3" in response.data
+    assert b"/static/styles.css?v=20261023-4" in response.data
+    assert b"/static/favicon.svg?v=20261023-4" in response.data
+    assert b"/static/charts.js?v=20261023-4" in response.data
+    assert b"/static/dashboard.js?v=20261023-4" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -176,6 +210,7 @@ def test_trend_series_marks_empty_days_without_zero_values() -> None:
                 "date": "2026-06-13",
                 "analysis": {
                     "food_calories": 1400,
+                    "bmr_calories": 1700,
                     "burned_calories": 2600,
                     "activity_calories": 400,
                     "calorie_deficit": 1200,
@@ -187,6 +222,7 @@ def test_trend_series_marks_empty_days_without_zero_values() -> None:
     assert series[0] == {"date": "2026-06-12", "has_data": False}
     assert series[1]["has_data"] is True
     assert series[1]["food"] == 1400
+    assert series[1]["basal"] == 1700
 
 
 def test_weight_series_uses_full_selected_date_window() -> None:
@@ -300,18 +336,43 @@ def test_entry_post_deletes_old_uploaded_files(tmp_path: Path) -> None:
     assert not old_file.exists()
 
 
+def test_entry_post_rejects_upload_with_invalid_image_signature(tmp_path: Path) -> None:
+    repo = MemoryDietRepository()
+    settings = _settings()
+    settings.app_config["upload_dir"] = str(tmp_path)
+    app = create_app(settings=settings, repository=repo)
+
+    response = app.test_client().post(
+        "/entry",
+        data={
+            "date": "2026-06-13",
+            "diary_text": "fake image",
+            "images": (BytesIO(b"not really a jpg"), "fake.jpg"),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    entry = repo.get_entry("halil", "2026-06-13")
+
+    assert response.status_code == 200
+    assert entry["image_urls"] == []
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_weight_post_logs_weight_separately() -> None:
     repo = MemoryDietRepository()
+    repo.save_profile("halil", {"age": 30, "gender": "male", "height_cm": 180, "weight_kg": 80.0})
     app = create_app(settings=_settings(), repository=repo)
 
     response = app.test_client().post(
         "/weight",
-        data={"date": "2026-06-13", "weight_kg": "82.4"},
+        data={"date": "2026-06-13", "weight_kg": "82,4"},
         follow_redirects=True,
     )
 
     assert response.status_code == 200
     assert repo.get_profile("halil")["weight_kg"] == 82.4
+    assert repo.get_profile("halil")["bmr_calories"] == 1984
     assert repo.list_weight_logs(
         "halil",
         start_date="2026-06-13",
@@ -329,8 +390,24 @@ def test_weight_page_renders_log_form_and_recent_weights() -> None:
     assert response.status_code == 200
     assert b"Weight log" in response.data
     assert b"Log weight" in response.data
+    assert b'data-weight-step="-0.1"' in response.data
+    assert b'data-weight-step="0.1"' in response.data
+    assert b'name="weight_kg"' in response.data
+    assert b'inputmode="decimal"' in response.data
+    assert b'value="82.4"' in response.data
     assert b"82.4 kg" in response.data
     assert b"data-loading-form" in response.data
+
+
+def test_weight_page_prefills_profile_weight_when_no_logs() -> None:
+    repo = MemoryDietRepository()
+    repo.save_profile("halil", {"weight_kg": 83.1})
+    app = create_app(settings=_settings(), repository=repo)
+
+    response = app.test_client().get("/weight")
+
+    assert response.status_code == 200
+    assert b'value="83.1"' in response.data
 
 
 def test_entry_form_includes_loading_state() -> None:
@@ -339,7 +416,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20261023-3" in response.data
+    assert b"/static/forms.js?v=20261023-4" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -347,12 +424,12 @@ def test_entry_form_includes_loading_state() -> None:
     assert b"when photos are attached" not in response.data
     assert b'name="images"' not in response.data
     assert b"Photos" not in response.data
-    assert b'rows="14"' in response.data
-    assert b"Morning:" in response.data
-    assert b"2 cups of coffee" in response.data
-    assert b"Lunch:" in response.data
-    assert b"Dinner:" in response.data
-    assert b"Activity:" in response.data
+    assert b'rows="18"' in response.data
+    assert b"Morning:" not in response.data
+    assert b"2 cups of coffee" not in response.data
+    assert b"Lunch:" not in response.data
+    assert b"Dinner:" not in response.data
+    assert b"Activity:" not in response.data
     assert b"Log weight" not in response.data
 
 
@@ -432,7 +509,38 @@ def test_profile_form_includes_loading_state() -> None:
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
+    assert b'type="text" name="weight_kg"' in response.data
+    assert b'type="text" name="goal_weight_kg"' in response.data
+    assert b"Height (cm)" in response.data
+    assert b"Current weight (kg)" in response.data
+    assert b"Goal weight (kg)" in response.data
+    assert b"data-bmr-form" in response.data
+    assert b"data-bmr-preview" in response.data
+    assert b"Calculated basal" in response.data
     assert b"Saving..." in response.data
+
+
+def test_profile_post_calculates_bmr() -> None:
+    repo = MemoryDietRepository()
+    app = create_app(settings=_settings(), repository=repo)
+
+    response = app.test_client().post(
+        "/profile",
+        data={
+            "name": "Halil",
+            "age": "30",
+            "gender": "male",
+            "height_cm": "180",
+            "weight_kg": "82.4",
+            "goal_weight_kg": "78",
+            "activity_level": "moderate",
+            "goal": "fat_loss",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert repo.get_profile("halil")["bmr_calories"] == 2255
 
 
 def test_login_post_accepts_configured_password() -> None:
@@ -450,7 +558,38 @@ def test_login_post_accepts_configured_password() -> None:
     response = app.test_client().post("/login", data={"username": "halil", "password": "secret"})
 
     assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/profile"
+
+
+def test_production_requires_secure_secret() -> None:
+    settings = Settings(
+        APP_ENV="prod",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="change-me-in-prod",
+        ANTHROPIC_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+
+    with pytest.raises(RuntimeError, match="FLASK_SECRET_KEY"):
+        create_app(settings=settings, repository=MemoryDietRepository())
+
+
+def test_production_allows_profile_passwords_without_global_password() -> None:
+    settings = Settings(
+        APP_ENV="prod",
+        APP_PASSWORD="",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="secure-prod-secret",
+        ANTHROPIC_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+
+    app = create_app(settings=settings, repository=MemoryDietRepository())
+
+    assert app.config["SECRET_KEY"] == "secure-prod-secret"
 
 
 def test_login_post_accepts_configured_password_hash() -> None:
@@ -468,7 +607,7 @@ def test_login_post_accepts_configured_password_hash() -> None:
     response = app.test_client().post("/login", data={"username": "halil", "password": "secret"})
 
     assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/profile"
 
 
 def test_login_post_rejects_wrong_username() -> None:
@@ -507,6 +646,153 @@ def test_login_form_includes_username_field() -> None:
     assert b'name="username"' in response.data
     assert b'value="halil"' in response.data
     assert b'autocomplete="username"' in response.data
+    assert b"/static/favicon.svg?v=20261023-4" in response.data
+    assert b'href="/register"' in response.data
+
+
+def test_register_creates_user_and_allows_login() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        ANTHROPIC_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    repo = MemoryDietRepository()
+    app = create_app(settings=settings, repository=repo)
+    client = app.test_client()
+
+    response = client.post(
+        "/register",
+        data={"username": "Deniz_01", "password": "secret2"},
+        follow_redirects=True,
+    )
+    profile = repo.get_profile("deniz_01")
+
+    assert response.status_code == 200
+    assert b"Account created" in response.data
+    assert profile["username"] == "deniz_01"
+    assert "password_hash" in profile
+
+    response = client.post(
+        "/login",
+        data={"username": "deniz_01", "password": "secret2"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"<span>deniz_01</span>" in response.data
+    assert b"Complete your profile before using the app." in response.data
+    assert b"Profile" in response.data
+
+
+def test_new_user_cannot_use_app_until_profile_is_complete() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        ANTHROPIC_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    repo = MemoryDietRepository()
+    repo.save_profile("deniz", {"password_hash": generate_password_hash("secret2")})
+    app = create_app(settings=settings, repository=repo)
+    client = app.test_client()
+
+    client.post("/login", data={"username": "deniz", "password": "secret2"})
+    response = client.get("/")
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/profile"
+
+    response = client.post(
+        "/profile",
+        data={
+            "name": "Deniz",
+            "age": "30",
+            "gender": "male",
+            "height_cm": "180",
+            "weight_kg": "82.4",
+            "goal_weight_kg": "78",
+            "activity_level": "low",
+            "goal": "fat_loss",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/"
+    assert repo.get_profile("deniz")["profile_complete"] is True
+
+
+def test_registered_users_do_not_share_entries() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        ANTHROPIC_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    repo = MemoryDietRepository()
+    repo.save_profile(
+        "deniz",
+        {
+            "password_hash": generate_password_hash("secret2"),
+            "age": 30,
+            "gender": "male",
+            "height_cm": 180,
+            "weight_kg": 82.4,
+            "activity_level": "low",
+            "goal": "fat_loss",
+            "profile_complete": True,
+        },
+    )
+    repo.save_entry(
+        "halil",
+        "2026-06-13",
+        {
+            "diary_text": "halil day",
+            "image_urls": [],
+            "analysis": {"food_calories": 999, "burned_calories": 2000, "calorie_deficit": 1001},
+        },
+    )
+    app = create_app(settings=settings, repository=repo)
+    client = app.test_client()
+
+    client.post("/login", data={"username": "deniz", "password": "secret2"})
+    response = client.get("/?range=14d")
+
+    assert response.status_code == 200
+    assert b"999 kcal" not in response.data
+
+
+def test_register_rejects_duplicate_username() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        ANTHROPIC_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    repo = MemoryDietRepository()
+    repo.save_profile("deniz", {"password_hash": generate_password_hash("secret2")})
+    app = create_app(settings=settings, repository=repo)
+
+    response = app.test_client().post(
+        "/register",
+        data={"username": "deniz", "password": "secret3"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"already exists" in response.data
 
 
 def _settings() -> Settings:
@@ -519,6 +805,11 @@ def _settings() -> Settings:
         SINGLE_USER_ID="halil",
         USE_MEMORY_REPOSITORY=True,
     )
+
+
+def test_calendar_days_leave_unlogged_days_empty() -> None:
+    days = _calendar_days(["2026-06-01", "2026-06-02"], [{"date": "2026-06-01", "analysis": {"calorie_deficit": 0}}])
+    assert [(day["logged"], day["tone"]) for day in days] == [(True, "neutral"), (False, "empty")]
 
 
 def test_wealth_tracker_password_hash_is_accepted() -> None:
@@ -534,8 +825,3 @@ def test_wealth_tracker_password_hash_is_accepted() -> None:
 
     assert _password_matches(settings, "correct horse")
     assert not _password_matches(settings, "wrong")
-
-
-def test_calendar_days_leave_unlogged_days_empty() -> None:
-    days = _calendar_days(["2026-06-01", "2026-06-02"], [{"date": "2026-06-01", "analysis": {"calorie_deficit": 0}}])
-    assert [(day["logged"], day["tone"]) for day in days] == [(True, "neutral"), (False, "empty")]

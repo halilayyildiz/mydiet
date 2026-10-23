@@ -14,6 +14,7 @@ Return only a JSON object with this exact shape:
       "fat_g": number
     }}
   ],
+  "bmr_calories": number,
   "activity_calories": number,
   "burned_calories": number,
   "calorie_deficit": number,
@@ -30,10 +31,11 @@ Definitions:
 - food_items: every identifiable food or drink from the diary, with estimated calories, macro grams, and the closest meal bucket. Use short names in {output_language}, like "eggs and toast" or "chicken salad" for English.
 - food_items[].meal: use "morning" for breakfast/morning drinks, "lunch" for midday food, "dinner" for evening food, and "snacks" for snacks outside meals.
 - protein_g, carbs_g, fat_g at the top level: total macro grams across all food_items for the day.
+- bmr_calories: use the profile_json bmr_calories value when present; this is the profile-calculated baseline burn including BMR plus ordinary daily movement for the selected activity_level, but excluding explicit exercise/activity from the diary.
 - activity_calories: active calories burned through exercise and movement mentioned by user.
-- burned_calories: estimated total daily energy expenditure, including BMR and activity.
+- burned_calories: estimated total daily energy expenditure, including bmr_calories plus explicit exercise/activity from the diary.
 - calorie_deficit: burned_calories - food_calories.
-- Use the profile to estimate BMR when enough fields exist.
+- Use profile_json.bmr_calories as the baseline burn source of truth when it exists.
 - If data is missing, make conservative estimates and list assumptions.
 - Keep all user-facing text in {output_language}: food item names, summary, and assumptions.
 - Keep JSON keys and food_items[].meal values exactly as specified, regardless of output language.
