@@ -8,6 +8,7 @@ dependencies = [
   "flask>=3.0.0",
   "google-cloud-firestore>=2.21.0",
   "google-genai>=1.0.0",
+  "gunicorn>=23.0.0",
   "pydantic>=2.8.0",
   "pydantic-settings>=2.4.0",
   "python-dotenv>=1.0.1",

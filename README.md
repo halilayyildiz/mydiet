@@ -54,21 +54,25 @@ users/{user_id}/daily_entries/{YYYY-MM-DD}
 users/{user_id}/weight_logs/{YYYY-MM-DD}
 ```
 
-## Deployment sketch
+## Deployment
 
-On the GCP VM:
+Runs on the same Ubuntu server as Wealth Tracker: gunicorn on `127.0.0.1:8080` as the `mydiet`
+systemd service, behind the server's existing Caddy, which routes `mydiet.halilayyildiz.com` here and
+handles HTTPS.
 
 ```bash
-sudo mkdir -p /opt/mydiet
-sudo chown "$USER":"$USER" /opt/mydiet
-git clone <repo-url> /opt/mydiet/app
-cd /opt/mydiet/app
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -e .
+# once, from your machine. The repo is private: the first run prints a read-only deploy key to add in
+# GitHub → Settings → Deploy keys; then run it again.
+ssh ubuntu@SERVER 'bash -s' < deploy/install.sh
+# env file (GOOGLE_APPLICATION_CREDENTIALS=/var/lib/mydiet/service-account.json) and Firestore key:
+sudo install -m 640 -g mydiet .env /etc/mydiet.env
+sudo install -m 640 -o mydiet -g mydiet service-account.json /var/lib/mydiet/service-account.json
+sudo systemctl enable --now mydiet && sudo systemctl reload caddy
+
+# later updates
+/opt/mydiet/deploy/update.sh
 ```
 
-For a quick local UI-only run without Firestore credentials, set `USE_MEMORY_REPOSITORY=true`.
+Point the `mydiet` DNS A record at the server; Caddy gets the certificate on the first request.
 
-Then install `deploy/systemd/mydiet.service` and `deploy/nginx.conf`, update paths/domains if needed,
-and reload systemd/nginx.
+For a quick local UI-only run without Firestore credentials, set `USE_MEMORY_REPOSITORY=true`.

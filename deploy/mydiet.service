@@ -1,0 +1,24 @@
+[Unit]
+Description=MyDiet
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mydiet
+Group=mydiet
+WorkingDirectory=/opt/mydiet
+EnvironmentFile=/etc/mydiet.env
+ExecStart=/opt/mydiet/.venv/bin/gunicorn --bind 127.0.0.1:8080 --workers 2 --timeout 120 --forwarded-allow-ips 127.0.0.1 --access-logfile - mydiet.wsgi:app
+Restart=always
+RestartSec=5
+
+# The app only needs to write uploaded images.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/mydiet/uploads
+
+[Install]
+WantedBy=multi-user.target
