@@ -55,8 +55,7 @@ def test_language_switch_renders_turkish_ui() -> None:
     assert b"<span>halil</span>" in response.data
     assert "Profil".encode() in response.data
     assert "Çıkış".encode() in response.data
-    assert b'class="header-menu language-menu"' in response.data
-    assert b'<span>TR</span>' in response.data
+    assert b'class="language-switch"' in response.data
     assert b'class="active" type="submit" name="lang" value="tr">TR</button>' in response.data
     assert repo.get_profile("halil")["preferred_language"] == "tr"
 
@@ -171,10 +170,10 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20261023-4" in response.data
-    assert b"/static/favicon.svg?v=20261023-4" in response.data
-    assert b"/static/charts.js?v=20261023-4" in response.data
-    assert b"/static/dashboard.js?v=20261023-4" in response.data
+    assert b"/static/styles.css?v=20261023-5" in response.data
+    assert b"/static/favicon.svg?v=20261023-5" in response.data
+    assert b"/static/charts.js?v=20261023-5" in response.data
+    assert b"/static/dashboard.js?v=20261023-5" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -416,7 +415,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20261023-4" in response.data
+    assert b"/static/forms.js?v=20261023-5" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -646,7 +645,7 @@ def test_login_form_includes_username_field() -> None:
     assert b'name="username"' in response.data
     assert b'value="halil"' in response.data
     assert b'autocomplete="username"' in response.data
-    assert b"/static/favicon.svg?v=20261023-4" in response.data
+    assert b"/static/favicon.svg?v=20261023-5" in response.data
     assert b'href="/register"' in response.data
 
 

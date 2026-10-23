@@ -1552,3 +1552,156 @@ h2 {
     min-width: 0;
   }
 }
+
+/* Header: one account menu that also holds the language switch */
+
+.site-header {
+  grid-template-columns: auto 1fr auto;
+}
+
+.header-menu-button {
+  border-radius: var(--control-radius);
+  font-weight: 800;
+  gap: 8px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 10px 0 6px;
+}
+
+.header-menu-button::after {
+  background: var(--select-arrow) no-repeat center / 10px 7px;
+  content: "";
+  height: 8px;
+  transition: transform 140ms ease;
+  width: 10px;
+}
+
+.avatar {
+  align-items: center;
+  background: var(--green-soft);
+  border-radius: 999px;
+  color: var(--green);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.header-menu-panel {
+  border-radius: 12px;
+  min-width: 200px;
+  padding: 6px;
+}
+
+.header-menu-panel a,
+.header-menu-panel button {
+  border-radius: 8px;
+  font-weight: 700;
+  height: 40px;
+  min-height: 40px;
+}
+
+.language-switch {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: flex !important;
+  justify-content: space-between;
+  margin: 2px 0;
+  padding: 8px 4px 8px 10px;
+}
+
+.language-switch > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.segmented {
+  background: var(--health-bg);
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+}
+
+.header-menu-panel .segmented button {
+  font-size: 12px;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  width: auto;
+}
+
+.header-menu-panel .segmented button.active {
+  background: var(--green);
+  color: white;
+}
+
+.menu-logout {
+  color: var(--red) !important;
+}
+
+@media (max-width: 520px) {
+  .header-menu-button {
+    font-size: 13px;
+    padding: 0 8px 0 6px;
+  }
+}
+
+/* Range picker: one segmented control */
+
+.range-control {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 3px;
+}
+
+.range-control button {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  height: 36px;
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.range-control button:hover {
+  color: var(--ink);
+}
+
+.range-control button.selected {
+  background: var(--green);
+  color: white;
+}
+
+@media (max-width: 820px) {
+  .range-control {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .range-control button {
+    padding: 0 4px;
+  }
+}
+
+/* Home-screen app: keep content clear of the iPhone notch and home bar */
+
+@media (max-width: 520px) {
+  .site-header {
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+
+  .page-shell {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+}

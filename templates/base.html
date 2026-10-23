@@ -2,9 +2,16 @@
 <html lang="{{ lang }}">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{% block title %}MyDiet{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=asset_version) }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest', v=asset_version) }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png', v=asset_version) }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MyDiet">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#f7faf9">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>
   <body>
@@ -13,26 +20,23 @@
         <img class="brand-icon" src="{{ url_for('static', filename='favicon.svg', v=asset_version) }}" alt="">
         <span>MyDiet</span>
       </a>
-      <details class="header-menu language-menu">
-        <summary class="header-menu-button" aria-label="{{ t.language }}">
-          <span>{{ lang.upper() }}</span>
-        </summary>
-        <div class="header-menu-panel">
-          <form action="{{ url_for('set_language') }}" method="post">
-            <input type="hidden" name="next" value="{{ request.full_path }}">
-            <button class="{{ 'active' if lang == 'tr' else '' }}" type="submit" name="lang" value="tr">TR</button>
-            <button class="{{ 'active' if lang == 'en' else '' }}" type="submit" name="lang" value="en">EN</button>
-          </form>
-        </div>
-      </details>
       <details class="header-menu account-menu">
         <summary class="header-menu-button" aria-label="{{ username }}">
+          <span class="avatar" aria-hidden="true">{{ username[:1] | upper }}</span>
           <span>{{ username }}</span>
         </summary>
         <div class="header-menu-panel">
           <a class="{{ 'active' if active_page == 'profile' else '' }}" href="{{ url_for('profile') }}">{{ t.profile }}</a>
+          <form class="language-switch" action="{{ url_for('set_language') }}" method="post" aria-label="{{ t.language }}">
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <span>{{ t.language }}</span>
+            <div class="segmented">
+              <button class="{{ 'active' if lang == 'tr' else '' }}" type="submit" name="lang" value="tr">TR</button>
+              <button class="{{ 'active' if lang == 'en' else '' }}" type="submit" name="lang" value="en">EN</button>
+            </div>
+          </form>
           <form action="{{ url_for('logout') }}" method="post">
-            <button type="submit">{{ t.log_out }}</button>
+            <button class="menu-logout" type="submit">{{ t.log_out }}</button>
           </form>
         </div>
       </details>

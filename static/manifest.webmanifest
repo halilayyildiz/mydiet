@@ -1,0 +1,15 @@
+{
+  "name": "MyDiet",
+  "short_name": "MyDiet",
+  "description": "Daily calorie balance, meals and weight.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7faf9",
+  "theme_color": "#f7faf9",
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
