@@ -81,15 +81,30 @@ systemd service with its SQLite database at `/var/lib/mydiet/mydiet.db`, behind 
 handles HTTPS.
 
 ```bash
-# once, from your machine. The repo is private: the first run prints a read-only deploy key to add in
-# GitHub → Settings → Deploy keys; then run it again.
-ssh ubuntu@SERVER 'bash -s' < deploy/install.sh
+# once, from your machine (the repo is public, so the server clones it over HTTPS)
+ssh ubuntu@SERVER 'REPO=https://github.com/halilayyildiz/mydiet.git bash -s' < deploy/install.sh
 sudo install -m 640 -g mydiet .env /etc/mydiet.env
 sudo systemctl enable --now mydiet && sudo systemctl reload caddy
 
 # later updates
 /opt/mydiet/deploy/update.sh
 ```
+
+### Automatic deploys
+
+`.github/workflows/deploy.yml` runs `update.sh` on the server on every push to `main` (and by hand from the
+Actions tab). It uses a dedicated SSH key that the server only accepts for that one command. Set up once:
+
+```bash
+# on your machine
+ssh-keygen -t ed25519 -N "" -C "github-deploy mydiet" -f ~/.ssh/mydiet_deploy
+echo "command=\"/opt/mydiet/deploy/update.sh\",restrict $(cat ~/.ssh/mydiet_deploy.pub)" \
+  | ssh ubuntu@SERVER 'cat >> ~/.ssh/authorized_keys'
+ssh-keyscan -t ed25519 SERVER   # output goes into DEPLOY_KNOWN_HOSTS
+```
+
+Repository secrets (GitHub → Settings → Secrets and variables → Actions): `DEPLOY_SSH_KEY` (contents of
+`~/.ssh/mydiet_deploy`), `DEPLOY_KNOWN_HOSTS` (the `ssh-keyscan` line) and `DEPLOY_HOST` (`ubuntu@SERVER`).
 
 Point the `mydiet` DNS A record at the server; Caddy gets the certificate on the first request.
 
