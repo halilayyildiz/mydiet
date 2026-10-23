@@ -138,9 +138,9 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20261023-2" in response.data
-    assert b"/static/charts.js?v=20261023-2" in response.data
-    assert b"/static/dashboard.js?v=20261023-2" in response.data
+    assert b"/static/styles.css?v=20261023-3" in response.data
+    assert b"/static/charts.js?v=20261023-3" in response.data
+    assert b"/static/dashboard.js?v=20261023-3" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -339,7 +339,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20261023-2" in response.data
+    assert b"/static/forms.js?v=20261023-3" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -534,3 +534,8 @@ def test_wealth_tracker_password_hash_is_accepted() -> None:
 
     assert _password_matches(settings, "correct horse")
     assert not _password_matches(settings, "wrong")
+
+
+def test_calendar_days_leave_unlogged_days_empty() -> None:
+    days = _calendar_days(["2026-06-01", "2026-06-02"], [{"date": "2026-06-01", "analysis": {"calorie_deficit": 0}}])
+    assert [(day["logged"], day["tone"]) for day in days] == [(True, "neutral"), (False, "empty")]

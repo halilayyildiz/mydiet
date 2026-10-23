@@ -137,8 +137,10 @@
         {% else %}
           <a class="calendar-day {{ day.tone }}" href="{{ url_for('entry_form', date=day.date) }}">
             <span class="calendar-date">{{ day.day }}</span>
-            <strong class="calendar-deficit">{{ day.deficit }}</strong>
-            <span class="calendar-unit">kcal</span>
+            {% if day.logged %}
+              <strong class="calendar-deficit">{{ day.deficit }}</strong>
+              <span class="calendar-unit">kcal</span>
+            {% endif %}
           </a>
         {% endif %}
       {% endfor %}

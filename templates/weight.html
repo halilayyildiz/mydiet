@@ -37,7 +37,7 @@
       {% if weight_logs %}
         <dl class="analysis-list">
           {% for log in weight_logs %}
-            <div><dt>{{ log.date }}</dt><dd>{{ log.weight_kg }} kg</dd></div>
+            <div><dt>{{ log.date | short_date }}</dt><dd>{{ log.weight_kg }} kg</dd></div>
           {% endfor %}
         </dl>
       {% else %}

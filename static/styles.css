@@ -12,6 +12,10 @@
   --blue: #306b9f;
   --coral: #d36a4b;
   --health-bg: #f2f6f4;
+  --radius: 14px;
+  --control-radius: 10px;
+  --control-height: 44px;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2369757d' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 * {
@@ -62,27 +66,26 @@ textarea {
 }
 
 .brand-icon {
-  align-items: center;
-  background: var(--green);
-  border-radius: 8px;
-  color: white;
-  display: inline-flex;
+  border-radius: 9px;
+  display: block;
   height: 34px;
-  justify-content: center;
   width: 34px;
 }
 
-.range-control button,
-.stack-form button,
-.profile-grid button {
-  border: 1px solid var(--line);
+.range-control button {
+  background: transparent;
+  border: 0;
   border-radius: 8px;
-  color: var(--ink);
+  color: var(--muted);
   font-size: 14px;
   font-weight: 800;
-  min-height: 40px;
+  height: 36px;
   padding: 0 14px;
-  text-decoration: none;
+  white-space: nowrap;
+}
+
+.range-control button:hover {
+  color: var(--ink);
 }
 
 .range-control button.selected {
@@ -106,17 +109,16 @@ button:disabled {
 }
 
 .language-form select {
-  appearance: auto;
-  background: var(--panel);
+  appearance: none;
+  background: var(--panel) var(--select-arrow) no-repeat right 10px center / 10px 7px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--control-radius);
   color: var(--ink);
   cursor: pointer;
   font-size: 14px;
-  font-weight: 900;
-  min-height: 40px;
-  min-width: 74px;
-  padding: 0 8px;
+  font-weight: 800;
+  height: 40px;
+  padding: 0 28px 0 12px;
 }
 
 .account-menu {
@@ -128,15 +130,15 @@ button:disabled {
   align-items: center;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--control-radius);
   color: var(--ink);
   cursor: pointer;
   display: inline-flex;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 800;
   gap: 8px;
+  height: 40px;
   list-style: none;
-  min-height: 40px;
   padding: 0 12px;
   white-space: nowrap;
 }
@@ -233,10 +235,12 @@ h2 {
 }
 
 .range-control {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
+  gap: 2px;
+  padding: 3px;
 }
 
 .metric-grid {
@@ -251,10 +255,12 @@ h2 {
 .chart-section,
 .calendar-section,
 .result-panel,
+.weight-log-panel,
+.profile-grid,
 .login-panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
 }
 
 .metric {
@@ -692,20 +698,28 @@ h2 {
 
 .month-form input,
 .month-step {
-  min-height: 40px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  color: var(--ink);
+  height: 40px;
+}
+
+.month-form input {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 10px;
 }
 
 .month-step {
   align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
   display: inline-flex;
-  font-size: 24px;
-  font-weight: 900;
+  flex: 0 0 40px;
+  font-size: 22px;
+  font-weight: 800;
   justify-content: center;
   line-height: 1;
   text-decoration: none;
-  width: 42px;
 }
 
 .month-step:hover {
@@ -754,6 +768,16 @@ h2 {
 .calendar-day.neutral {
   background: var(--health-bg);
   border-color: var(--line);
+}
+
+.calendar-day.empty {
+  background: transparent;
+  border-style: dashed;
+}
+
+.calendar-day.empty:hover,
+.calendar-day.neutral:hover {
+  background: var(--health-bg);
 }
 
 .calendar-day.blank {
@@ -866,11 +890,17 @@ h2 {
 .stack-form label,
 .weight-log-panel label,
 .profile-grid label {
+  align-content: start;
   color: var(--muted);
   display: grid;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 800;
   gap: 7px;
+}
+
+label small {
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .stack-form input,
@@ -881,15 +911,38 @@ h2 {
   appearance: none;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--control-radius);
   color: var(--ink);
-  min-height: 48px;
-  padding: 10px 12px;
+  font-size: 15px;
+  font-weight: 500;
+  height: var(--control-height);
+  line-height: 1.4;
+  padding: 0 12px;
   width: 100%;
 }
 
+.profile-grid select {
+  background: var(--panel) var(--select-arrow) no-repeat right 14px center / 12px 8px;
+  cursor: pointer;
+  padding-right: 36px;
+}
+
+.stack-form input:focus,
+.stack-form textarea:focus,
+.weight-log-panel input:focus,
+.profile-grid input:focus,
+.profile-grid select:focus,
+.month-form input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(24, 115, 93, 0.15);
+  outline: none;
+}
+
 .stack-form textarea {
+  height: auto;
+  line-height: 1.55;
   min-height: 280px;
+  padding: 12px;
   resize: vertical;
 }
 
@@ -897,9 +950,19 @@ h2 {
 .weight-log-panel button,
 .profile-grid button {
   background: var(--green);
-  border-color: var(--green);
+  border: 1px solid var(--green);
+  border-radius: var(--control-radius);
   color: white;
-  min-height: 50px;
+  font-size: 15px;
+  font-weight: 800;
+  height: 48px;
+  padding: 0 18px;
+}
+
+.stack-form button:hover,
+.weight-log-panel button:hover,
+.profile-grid button:hover {
+  background: #136250;
 }
 
 .stack-form button:disabled,
@@ -910,10 +973,7 @@ h2 {
 }
 
 .weight-log-panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 20px;
+  padding: 22px;
 }
 
 .weight-log-panel p {
@@ -921,7 +981,7 @@ h2 {
 }
 
 .result-panel {
-  padding: 20px;
+  padding: 22px;
 }
 
 .analysis-list {
@@ -931,10 +991,17 @@ h2 {
 }
 
 .analysis-list div {
+  align-items: baseline;
   border-bottom: 1px solid var(--line);
   display: flex;
+  gap: 12px;
   justify-content: space-between;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
+}
+
+.analysis-list div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .analysis-list dt {
@@ -1055,15 +1122,15 @@ h2 {
 }
 
 .profile-grid {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  column-gap: 18px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 22px;
+  row-gap: 16px;
 }
 
 .profile-grid button {
   grid-column: 1 / -1;
+  margin-top: 4px;
 }
 
 .flash-stack {
@@ -1078,7 +1145,7 @@ h2 {
 .flash {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--control-radius);
   box-shadow: 0 16px 40px rgba(27, 35, 40, 0.14);
   margin-bottom: 8px;
   padding: 12px 14px;
@@ -1219,9 +1286,37 @@ h2 {
     gap: 4px;
   }
 
+  .range-control {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .range-control button {
+    padding: 0 4px;
+  }
+
+  .balance-result {
+    align-items: center;
+  }
+
+  .balance-result strong {
+    margin-left: auto;
+  }
+
   .calendar-day {
-    min-height: 50px;
+    aspect-ratio: auto;
+    min-height: 52px;
+    min-width: 0;
     padding: 4px;
+  }
+
+  .month-form {
+    width: 100%;
+  }
+
+  .month-form input {
+    flex: 1;
+    min-width: 0;
   }
 
   .calendar-date {

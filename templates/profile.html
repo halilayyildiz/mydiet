@@ -36,19 +36,16 @@
       </select>
     </label>
     <label>
-      {{ t.height }}
+      <span>{{ t.height }} <small>(cm)</small></span>
       <input type="number" name="height_cm" value="{{ profile.height_cm or '' }}" min="80" max="240">
-      <span>cm</span>
     </label>
     <label>
-      {{ t.current_weight }}
+      <span>{{ t.current_weight }} <small>(kg)</small></span>
       <input type="number" name="weight_kg" value="{{ profile.weight_kg or '' }}" step="0.1" min="20" max="300">
-      <span>kg</span>
     </label>
     <label>
-      {{ t.goal_weight }}
+      <span>{{ t.goal_weight }} <small>(kg)</small></span>
       <input type="number" name="goal_weight_kg" value="{{ profile.goal_weight_kg or '' }}" step="0.1" min="20" max="300">
-      <span>kg</span>
     </label>
     <label>
       {{ t.activity_level }}

@@ -37,7 +37,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261023-2"
+ASSET_VERSION = "20261023-3"
 
 TEXTS = {
     "en": {
@@ -283,6 +283,10 @@ def create_app(
             "t": text,
             "username": settings.single_user_id,
         }
+
+    @app.template_filter("short_date")
+    def short_date(value: str) -> str:
+        return _short_date(value, lang=_current_lang())
 
     @app.before_request
     def require_login() -> Any:
@@ -558,12 +562,14 @@ def _calendar_days(month_dates: list[str], entries: list[dict[str, Any]]) -> lis
     for date_key in month_dates:
         analysis = by_date.get(date_key, {}).get("analysis") or {}
         deficit = int(analysis.get("calorie_deficit") or 0)
+        logged = bool(analysis)
         days.append(
             {
                 "date": date_key,
                 "day": int(date_key[-2:]),
                 "deficit": deficit,
-                "tone": _calendar_tone(deficit),
+                "logged": logged,
+                "tone": _calendar_tone(deficit) if logged else "empty",
             }
         )
     return blanks + days
@@ -629,6 +635,14 @@ def _date_range_label(start_date: str, end_date: str, *, lang: str = "en") -> st
     if start.year == end.year:
         return f"{start.strftime('%b')} {start.day} - {end.strftime('%b')} {end.day}, {end.year}"
     return f"{start.strftime('%b')} {start.day}, {start.year} - {end.strftime('%b')} {end.day}, {end.year}"
+
+
+def _short_date(value: str, *, lang: str = "en") -> str:
+    day = parse_iso_date(value)
+    if lang == "tr":
+        months = ["", "Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+        return f"{day.day} {months[day.month]} {day.year}"
+    return f"{day.strftime('%b')} {day.day}, {day.year}"
 
 
 def _totals(entries: list[dict[str, Any]]) -> dict[str, int]:
