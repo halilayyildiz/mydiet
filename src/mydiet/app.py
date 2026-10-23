@@ -21,14 +21,13 @@ from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 
 from mydiet.storage import DietRepository, MemoryDietRepository
-from mydiet.claude_client import ClaudeDietClient
+from mydiet.claude_client import analyze_entry
+from mydiet.mcp import register_mcp
 from mydiet.nutrition import (
     RANGE_OPTIONS,
     date_window,
-    fallback_analysis,
     food_item_groups,
     month_window,
-    normalize_analysis,
     parse_iso_date,
     today_iso,
 )
@@ -266,6 +265,8 @@ def create_app(
 
     repo = repository or (MemoryDietRepository() if settings.use_memory_repository else DietRepository(settings))
 
+    register_mcp(app, repo, settings)
+
     @app.context_processor
     def inject_globals() -> dict[str, Any]:
         lang = _current_lang()
@@ -284,7 +285,7 @@ def create_app(
     def require_login() -> Any:
         if not settings.app_password and not settings.app_password_hash:
             session["authenticated"] = True
-        if request.endpoint in {"login", "login_post", "set_language", "static", "uploaded_file"}:
+        if request.endpoint in {"login", "login_post", "set_language", "static", "uploaded_file", "mcp"}:
             return None
         if not session.get("authenticated"):
             return redirect(url_for("login", next=request.full_path))
@@ -381,33 +382,14 @@ def create_app(
         image_paths, image_urls = _save_uploads(request.files.getlist("images"), settings)
         language = _current_lang()
 
-        if settings.anthropic_api_key and (diary_text or image_paths):
-            try:
-                analysis = ClaudeDietClient(settings).analyze_day(
-                    diary_text=diary_text,
-                    profile=profile,
-                    entry_date=entry_date,
-                    image_paths=image_paths,
-                    language=language,
-                )
-                analysis = normalize_analysis(analysis)
-            except Exception as exc:
-                error_summary = f"Claude analysis failed: {exc}"
-                if language == "tr":
-                    error_summary = f"Claude analizi başarısız oldu: {exc}"
-                analysis = fallback_analysis(
-                    diary_text,
-                    profile,
-                    reason=error_summary,
-                    language=language,
-                )
-                analysis["summary"] = error_summary
-        else:
-            reason = "Set ANTHROPIC_API_KEY to calculate from diary text and images."
-            if language == "tr":
-                reason = "Günlük metni ve görsellerden hesaplamak için ANTHROPIC_API_KEY ayarla."
-            analysis = fallback_analysis(diary_text, profile, reason=reason, language=language)
-
+        analysis = analyze_entry(
+            settings,
+            diary_text=diary_text,
+            profile=profile,
+            entry_date=entry_date,
+            image_paths=image_paths,
+            language=language,
+        )
         repo.save_entry(
             settings.single_user_id,
             entry_date,

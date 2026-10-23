@@ -10,6 +10,7 @@ from typing import Any, Literal
 import anthropic
 from pydantic import BaseModel
 
+from mydiet.nutrition import fallback_analysis, normalize_analysis
 from mydiet.settings import Settings
 
 
@@ -82,6 +83,39 @@ class ClaudeDietClient:
         if response.parsed_output is None:
             raise ClaudeAnalysisError(f"Claude returned no analysis (stop reason: {response.stop_reason}).")
         return response.parsed_output.model_dump()
+
+
+def analyze_entry(
+    settings: Settings,
+    *,
+    diary_text: str,
+    profile: dict[str, Any],
+    entry_date: str,
+    image_paths: list[Path],
+    language: str,
+) -> dict[str, Any]:
+    """Claude's analysis of a day, or a rough estimate when Claude is unavailable or fails."""
+    if not settings.anthropic_api_key or not (diary_text or image_paths):
+        reason = "Set ANTHROPIC_API_KEY to calculate from diary text and images."
+        if language == "tr":
+            reason = "Günlük metni ve görsellerden hesaplamak için ANTHROPIC_API_KEY ayarla."
+        return fallback_analysis(diary_text, profile, reason=reason, language=language)
+    try:
+        analysis = ClaudeDietClient(settings).analyze_day(
+            diary_text=diary_text,
+            profile=profile,
+            entry_date=entry_date,
+            image_paths=image_paths,
+            language=language,
+        )
+        return normalize_analysis(analysis)
+    except Exception as exc:
+        error_summary = f"Claude analysis failed: {exc}"
+        if language == "tr":
+            error_summary = f"Claude analizi başarısız oldu: {exc}"
+        analysis = fallback_analysis(diary_text, profile, reason=error_summary, language=language)
+        analysis["summary"] = error_summary
+        return analysis
 
 
 def analysis_prompt(

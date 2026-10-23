@@ -43,6 +43,13 @@ Generate `APP_PASSWORD_HASH` with:
 
 `APP_PASSWORD` is still supported for quick local testing, but `APP_PASSWORD_HASH` is better for the VM.
 
+## Claude connector
+
+`/mcp/<MCP_TOKEN>` is a small MCP server (tools `log_food`, `set_day`, `get_day`, `list_days`,
+`log_weight`) so a claude.ai chat can log meals directly. Set `MCP_TOKEN` to a long random string and add
+`https://mydiet.halilayyildiz.com/mcp/<MCP_TOKEN>` in claude.ai → Settings → Connectors → Add custom connector.
+The secret path is the only credential, so keep the URL private.
+
 ## Storage
 
 SQLite at `MYDIET_DB` (default `data/mydiet.db`): tables `profiles`, `daily_entries` and `weight_logs`,

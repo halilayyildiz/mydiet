@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     single_user_id: str = Field(default="halil", alias="SINGLE_USER_ID")
     use_memory_repository: bool = Field(default=False, alias="USE_MEMORY_REPOSITORY")
+    mcp_token: str = Field(default="", alias="MCP_TOKEN")
     database_path: Path = Field(default=Path("data/mydiet.db"), alias="MYDIET_DB")
 
     @cached_property
