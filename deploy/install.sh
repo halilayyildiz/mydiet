@@ -5,6 +5,7 @@
 set -euo pipefail
 # SSH URL: the repo is private; the server reads it with a read-only deploy key (see README).
 REPO="${REPO:-git@github.com:halilayyildiz/mydiet.git}"
+BRANCH="${BRANCH:-main}"
 
 sudo apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git python3-venv >/dev/null
@@ -20,7 +21,7 @@ if [ ! -f "$KEY" ]; then
   sudo -u mydiet -H ssh-keygen -q -t ed25519 -N "" -C "mydiet deploy (read-only)" -f "$KEY"
   sudo -u mydiet -H sh -c "ssh-keyscan -t ed25519 github.com 2>/dev/null >> /var/lib/mydiet/.ssh/known_hosts"
 fi
-if [ ! -d /opt/mydiet/.git ] && ! sudo -u mydiet -H git clone -q "$REPO" /opt/mydiet; then
+if [ ! -d /opt/mydiet/.git ] && ! sudo -u mydiet -H git clone -q -b "$BRANCH" "$REPO" /opt/mydiet; then
   echo
   echo "Can't read $REPO. Add this key in GitHub → repo Settings → Deploy keys (leave write access off), then run install.sh again:"
   sudo cat "$KEY.pub"
