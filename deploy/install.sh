@@ -37,7 +37,8 @@ sudo systemctl daemon-reload
 
 # Serve the site from the same Caddy as Wealth Tracker (Caddy routes by domain name).
 grep -q mydiet.halilayyildiz.com /etc/caddy/Caddyfile || { echo; cat deploy/Caddyfile; } | sudo tee -a /etc/caddy/Caddyfile >/dev/null
-sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
+# The Wealth block takes its domain from the env var Caddy gets from systemd.
+sudo env $(sed -n "s/^Environment=//p" /etc/systemd/system/caddy.service.d/*.conf) caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 
 echo "Installed. Next: /etc/mydiet.env (mode 640, group mydiet) and /var/lib/mydiet/service-account.json,"
 echo "then: sudo systemctl enable --now mydiet && sudo systemctl reload caddy"

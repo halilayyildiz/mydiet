@@ -13,12 +13,12 @@ ExecStart=/opt/mydiet/.venv/bin/gunicorn --bind 127.0.0.1:8080 --workers 1 --thr
 Restart=always
 RestartSec=5
 
-# The app only needs to write uploaded images.
+# The app only writes uploaded images (and gunicorn its control socket in the home dir).
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-ReadWritePaths=/opt/mydiet/uploads
+ReadWritePaths=/opt/mydiet/uploads /var/lib/mydiet
 
 [Install]
 WantedBy=multi-user.target
