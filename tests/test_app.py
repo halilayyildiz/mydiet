@@ -237,9 +237,9 @@ def test_entry_post_uses_selected_language_for_fallback_analysis() -> None:
     entry = repo.get_entry("halil", "2026-06-13")
 
     assert response.status_code == 200
-    assert entry["analysis"]["summary"] == "Gemini analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
+    assert entry["analysis"]["summary"] == "Claude analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
     assert entry["analysis"]["assumptions"] == [
-        "Günlük metni ve görsellerden hesaplamak için GEMINI_API_KEY ayarla."
+        "Günlük metni ve görsellerden hesaplamak için ANTHROPIC_API_KEY ayarla."
     ]
 
 
@@ -441,7 +441,7 @@ def test_login_post_accepts_configured_password() -> None:
         APP_PASSWORD="secret",
         APP_PASSWORD_HASH="",
         FLASK_SECRET_KEY="test",
-        GEMINI_API_KEY="",
+        ANTHROPIC_API_KEY="",
         SINGLE_USER_ID="halil",
         USE_MEMORY_REPOSITORY=True,
     )
@@ -459,7 +459,7 @@ def test_login_post_accepts_configured_password_hash() -> None:
         APP_PASSWORD="",
         APP_PASSWORD_HASH=generate_password_hash("secret"),
         FLASK_SECRET_KEY="test",
-        GEMINI_API_KEY="",
+        ANTHROPIC_API_KEY="",
         SINGLE_USER_ID="halil",
         USE_MEMORY_REPOSITORY=True,
     )
@@ -477,7 +477,7 @@ def test_login_post_rejects_wrong_username() -> None:
         APP_PASSWORD="secret",
         APP_PASSWORD_HASH="",
         FLASK_SECRET_KEY="test",
-        GEMINI_API_KEY="",
+        ANTHROPIC_API_KEY="",
         SINGLE_USER_ID="halil",
         USE_MEMORY_REPOSITORY=True,
     )
@@ -495,7 +495,7 @@ def test_login_form_includes_username_field() -> None:
         APP_PASSWORD="secret",
         APP_PASSWORD_HASH="",
         FLASK_SECRET_KEY="test",
-        GEMINI_API_KEY="",
+        ANTHROPIC_API_KEY="",
         SINGLE_USER_ID="halil",
         USE_MEMORY_REPOSITORY=True,
     )
@@ -515,7 +515,7 @@ def _settings() -> Settings:
         APP_PASSWORD="",
         APP_PASSWORD_HASH="",
         FLASK_SECRET_KEY="test",
-        GEMINI_API_KEY="",
+        ANTHROPIC_API_KEY="",
         SINGLE_USER_ID="halil",
         USE_MEMORY_REPOSITORY=True,
     )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from mydiet.gemini_client import _json_safe, analysis_prompt
+from mydiet.claude_client import _json_safe, analysis_prompt
 from mydiet.settings import Settings
 
 
@@ -29,7 +29,7 @@ def test_analysis_prompt_comes_from_configured_file(tmp_path) -> None:
         APP_ENV="test",
         APP_PASSWORD="",
         APP_PASSWORD_HASH="",
-        GEMINI_API_KEY="",
+        ANTHROPIC_API_KEY="",
         FLASK_SECRET_KEY="test",
     )
     settings.app_config["analysis_prompt_path"] = str(prompt_path)
@@ -46,7 +46,7 @@ def test_default_analysis_prompt_requests_food_items() -> None:
         APP_ENV="test",
         APP_PASSWORD="",
         APP_PASSWORD_HASH="",
-        GEMINI_API_KEY="",
+        ANTHROPIC_API_KEY="",
         FLASK_SECRET_KEY="test",
     )
 
@@ -63,7 +63,7 @@ def test_analysis_prompt_uses_selected_output_language() -> None:
         APP_ENV="test",
         APP_PASSWORD="",
         APP_PASSWORD_HASH="",
-        GEMINI_API_KEY="",
+        ANTHROPIC_API_KEY="",
         FLASK_SECRET_KEY="test",
     )
 
@@ -71,3 +71,46 @@ def test_analysis_prompt_uses_selected_output_language() -> None:
 
     assert "Output language: Turkish" in prompt
     assert "Keep all user-facing text in Turkish" in prompt
+
+
+def test_analyze_day_sends_images_and_returns_parsed_analysis(tmp_path) -> None:
+    from types import SimpleNamespace
+
+    from mydiet.claude_client import ClaudeDietClient, DayAnalysis
+
+    image = tmp_path / "lunch.png"
+    image.write_bytes(b"png-bytes")
+    analysis = DayAnalysis(
+        food_calories=600,
+        food_items=[
+            {"name": "salad", "meal": "lunch", "calories": 600, "protein_g": 30, "carbs_g": 40, "fat_g": 20}
+        ],
+        activity_calories=0,
+        burned_calories=2200,
+        calorie_deficit=1600,
+        protein_g=30,
+        carbs_g=40,
+        fat_g=20,
+        confidence="medium",
+        summary="ok",
+        assumptions=[],
+    )
+    calls = []
+
+    def fake_parse(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(stop_reason="end_turn", parsed_output=analysis)
+
+    client = ClaudeDietClient(Settings(ANTHROPIC_API_KEY="test", FLASK_SECRET_KEY="test"))
+    client._client = SimpleNamespace(messages=SimpleNamespace(parse=fake_parse))
+
+    result = client.analyze_day(
+        diary_text="salad", profile={}, entry_date="2026-10-23", image_paths=[image], language="en"
+    )
+
+    assert result["food_items"][0]["meal"] == "lunch"
+    content = calls[0]["messages"][0]["content"]
+    assert content[0]["type"] == "image"
+    assert content[0]["source"]["media_type"] == "image/png"
+    assert content[-1]["type"] == "text"
+    assert calls[0]["output_format"] is DayAnalysis

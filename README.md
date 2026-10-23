@@ -3,7 +3,7 @@
 Personal diet tracker for `mydiet.halilayyildiz.com`.
 
 The app is a small Flask service that keeps its data in a local SQLite file. Daily free-text food/activity notes
-and optional images are sent to Gemini, which estimates:
+and optional images are sent to Claude, which estimates:
 
 - calories eaten
 - active calories burned
@@ -29,7 +29,7 @@ Open `http://localhost:8080`.
 APP_ENV=staging
 APP_PASSWORD_HASH=generate-a-password-hash
 FLASK_SECRET_KEY=replace-with-a-random-secret
-GEMINI_API_KEY=your-gemini-key
+ANTHROPIC_API_KEY=your-anthropic-key
 SINGLE_USER_ID=halil
 USE_MEMORY_REPOSITORY=false
 MYDIET_DB=data/mydiet.db

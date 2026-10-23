@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     app_password: str = Field(default="", alias="APP_PASSWORD")
     app_password_hash: str = Field(default="", alias="APP_PASSWORD_HASH")
     flask_secret_key: str = Field(default="change-me-in-prod", alias="FLASK_SECRET_KEY")
-    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     single_user_id: str = Field(default="halil", alias="SINGLE_USER_ID")
     use_memory_repository: bool = Field(default=False, alias="USE_MEMORY_REPOSITORY")
     database_path: Path = Field(default=Path("data/mydiet.db"), alias="MYDIET_DB")
@@ -45,8 +45,8 @@ class Settings(BaseSettings):
         return base
 
     @property
-    def gemini_model(self) -> str:
-        return str(self.app_config.get("gemini_model") or "gemini-2.5-flash")
+    def claude_model(self) -> str:
+        return str(self.app_config.get("claude_model") or "claude-opus-5-5")
 
     @property
     def analysis_prompt_path(self) -> Path:

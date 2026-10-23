@@ -21,7 +21,7 @@ from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 
 from mydiet.storage import DietRepository, MemoryDietRepository
-from mydiet.gemini_client import GeminiDietClient
+from mydiet.claude_client import ClaudeDietClient
 from mydiet.nutrition import (
     RANGE_OPTIONS,
     date_window,
@@ -49,7 +49,7 @@ TEXTS = {
         "analysis": "Analysis",
         "analyze_day": "Analyze day",
         "analyzing": "Analyzing...",
-        "analyzing_day": "Analyzing your day with Gemini. This can take a few seconds.",
+        "analyzing_day": "Analyzing your day with Claude. This can take a few seconds.",
         "basal": "Basal",
         "body_weight": "Body weight",
         "burned": "Burned",
@@ -142,7 +142,7 @@ TEXTS = {
         "analysis": "Analiz",
         "analyze_day": "Günü analiz et",
         "analyzing": "Analiz ediliyor...",
-        "analyzing_day": "Günün Gemini ile analiz ediliyor. Birkaç saniye sürebilir.",
+        "analyzing_day": "Günün Claude ile analiz ediliyor. Birkaç saniye sürebilir.",
         "basal": "Bazal",
         "body_weight": "Vücut ağırlığı",
         "burned": "Yakılan",
@@ -381,9 +381,9 @@ def create_app(
         image_paths, image_urls = _save_uploads(request.files.getlist("images"), settings)
         language = _current_lang()
 
-        if settings.gemini_api_key and (diary_text or image_paths):
+        if settings.anthropic_api_key and (diary_text or image_paths):
             try:
-                analysis = GeminiDietClient(settings).analyze_day(
+                analysis = ClaudeDietClient(settings).analyze_day(
                     diary_text=diary_text,
                     profile=profile,
                     entry_date=entry_date,
@@ -392,9 +392,9 @@ def create_app(
                 )
                 analysis = normalize_analysis(analysis)
             except Exception as exc:
-                error_summary = f"Gemini analysis failed: {exc}"
+                error_summary = f"Claude analysis failed: {exc}"
                 if language == "tr":
-                    error_summary = f"Gemini analizi başarısız oldu: {exc}"
+                    error_summary = f"Claude analizi başarısız oldu: {exc}"
                 analysis = fallback_analysis(
                     diary_text,
                     profile,
@@ -403,9 +403,9 @@ def create_app(
                 )
                 analysis["summary"] = error_summary
         else:
-            reason = "Set GEMINI_API_KEY to calculate from diary text and images."
+            reason = "Set ANTHROPIC_API_KEY to calculate from diary text and images."
             if language == "tr":
-                reason = "Günlük metni ve görsellerden hesaplamak için GEMINI_API_KEY ayarla."
+                reason = "Günlük metni ve görsellerden hesaplamak için ANTHROPIC_API_KEY ayarla."
             analysis = fallback_analysis(diary_text, profile, reason=reason, language=language)
 
         repo.save_entry(

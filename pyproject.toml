@@ -1,12 +1,12 @@
 [project]
 name = "mydiet"
 version = "0.1.0"
-description = "Personal diet dashboard with SQLite storage and Gemini-powered diary analysis."
+description = "Personal diet dashboard with SQLite storage and Claude-powered diary analysis."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "flask>=3.0.0",
-  "google-genai>=1.0.0",
+  "anthropic>=2.2.0",
   "gunicorn>=23.0.0",
   "pydantic>=2.8.0",
   "pydantic-settings>=2.4.0",

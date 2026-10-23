@@ -80,7 +80,7 @@ def fallback_analysis(
     diary_text: str,
     profile: dict[str, Any],
     *,
-    reason: str = "Set GEMINI_API_KEY to calculate from diary text and images.",
+    reason: str = "Set ANTHROPIC_API_KEY to calculate from diary text and images.",
     language: str = "en",
 ) -> dict[str, Any]:
     weight = _number(profile.get("weight_kg")) or 80
@@ -92,9 +92,9 @@ def fallback_analysis(
     food_items = _rough_food_items(diary_text, food)
     activity = _rough_activity_calories(diary_text)
     burned = round(max(bmr * 1.25 + activity, 1200))
-    summary = "Saved without Gemini analysis. Values are rough placeholders."
+    summary = "Saved without Claude analysis. Values are rough placeholders."
     if language == "tr":
-        summary = "Gemini analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
+        summary = "Claude analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
     return {
         "food_calories": food,
         "food_items": food_items,
