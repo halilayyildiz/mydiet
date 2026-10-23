@@ -1705,3 +1705,17 @@ h2 {
     padding-bottom: calc(56px + env(safe-area-inset-bottom));
   }
 }
+
+/* Keep a heading's text link ("Add today", "Update weight") on the title row on phones */
+@media (max-width: 820px) {
+  .section-heading:not(:has(.month-form)) {
+    align-items: flex-start;
+    flex-direction: row;
+  }
+
+  .section-heading > a {
+    flex: 0 0 auto;
+    padding-top: 4px;
+    white-space: nowrap;
+  }
+}
