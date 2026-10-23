@@ -40,7 +40,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261023-5"
+ASSET_VERSION = "20261023-6"
 
 TEXTS = {
     "en": {
@@ -73,6 +73,7 @@ TEXTS = {
         "daily_deficit_or_surplus": "Daily deficit or surplus",
         "dashboard": "Dashboard",
         "kg_per_week": "kg/week",
+        "kcal_per_day": "kcal/day",
         "language": "Language",
         "date": "Date",
         "days": "days",
@@ -196,6 +197,7 @@ TEXTS = {
         "height": "Boy",
         "high": "Yüksek",
         "kg_per_week": "kg/hafta",
+        "kcal_per_day": "kcal/gün",
         "language": "Dil",
         "last_days": "Son {days} gün",
         "log_out": "Çıkış",

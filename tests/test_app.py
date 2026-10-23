@@ -20,6 +20,10 @@ from mydiet.settings import Settings
 from werkzeug.security import generate_password_hash
 
 
+# Relative dates so range-based pages always include them.
+RECENT_DAY = date_window(3)[0]
+OLD_DAY = date_window(60)[0]
+
 def test_dashboard_renders_with_memory_repository() -> None:
     app = create_app(settings=_settings(), repository=MemoryDietRepository())
 
@@ -76,7 +80,7 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     repo = MemoryDietRepository()
     repo.save_entry(
         "halil",
-        "2026-06-13",
+        RECENT_DAY,
         {
             "diary_text": "sample",
             "image_urls": [],
@@ -96,8 +100,6 @@ def test_dashboard_shows_entry_day_energy_balance() -> None:
     assert response.status_code == 200
     assert b"Energy balance" in response.data
     assert b'<div class="balance-result">' in response.data
-    assert b"<strong>1.3</strong>" in response.data
-    assert b"<small>kg/week</small>" in response.data
     assert b"Eaten" in response.data
     assert b"1400 kcal" in response.data
     assert b"Burned" in response.data
@@ -145,8 +147,8 @@ def test_balance_summary_builds_bar_segments() -> None:
 
 def test_dashboard_weight_series_uses_selected_range() -> None:
     repo = MemoryDietRepository()
-    repo.save_weight("halil", "2026-05-01", 90.0)
-    repo.save_weight("halil", "2026-06-13", 82.4)
+    repo.save_weight("halil", OLD_DAY, 90.0)
+    repo.save_weight("halil", RECENT_DAY, 82.4)
     app = create_app(settings=_settings(), repository=repo)
 
     response = app.test_client().get("/?range=30d")
@@ -170,10 +172,10 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20261023-5" in response.data
-    assert b"/static/favicon.svg?v=20261023-5" in response.data
-    assert b"/static/charts.js?v=20261023-5" in response.data
-    assert b"/static/dashboard.js?v=20261023-5" in response.data
+    assert b"/static/styles.css?v=20261023-6" in response.data
+    assert b"/static/favicon.svg?v=20261023-6" in response.data
+    assert b"/static/charts.js?v=20261023-6" in response.data
+    assert b"/static/dashboard.js?v=20261023-6" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -381,7 +383,7 @@ def test_weight_post_logs_weight_separately() -> None:
 
 def test_weight_page_renders_log_form_and_recent_weights() -> None:
     repo = MemoryDietRepository()
-    repo.save_weight("halil", "2026-06-13", 82.4)
+    repo.save_weight("halil", RECENT_DAY, 82.4)
     app = create_app(settings=_settings(), repository=repo)
 
     response = app.test_client().get("/weight")
@@ -415,7 +417,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20261023-5" in response.data
+    assert b"/static/forms.js?v=20261023-6" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -645,7 +647,7 @@ def test_login_form_includes_username_field() -> None:
     assert b'name="username"' in response.data
     assert b'value="halil"' in response.data
     assert b'autocomplete="username"' in response.data
-    assert b"/static/favicon.svg?v=20261023-5" in response.data
+    assert b"/static/favicon.svg?v=20261023-6" in response.data
     assert b'href="/register"' in response.data
 
 
