@@ -519,3 +519,18 @@ def _settings() -> Settings:
         SINGLE_USER_ID="halil",
         USE_MEMORY_REPOSITORY=True,
     )
+
+
+def test_wealth_tracker_password_hash_is_accepted() -> None:
+    import base64
+    import hashlib
+
+    from mydiet.app import _password_matches
+
+    salt = b"0123456789abcdef"
+    key = hashlib.scrypt(b"correct horse", salt=salt, n=2**15, r=8, p=1, maxmem=64 * 1024 * 1024, dklen=64)
+    stored = "$".join(["scrypt", "32768", "8", "1", base64.b64encode(salt).decode(), base64.b64encode(key).decode()])
+    settings = Settings(APP_PASSWORD_HASH=stored, FLASK_SECRET_KEY="test")
+
+    assert _password_matches(settings, "correct horse")
+    assert not _password_matches(settings, "wrong")

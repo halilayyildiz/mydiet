@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import secrets
 from datetime import date, timedelta
 from pathlib import Path
@@ -681,9 +684,30 @@ def _optional_float(value: str | None) -> float | None:
 
 
 def _password_matches(settings: Settings, password: str) -> bool:
+    if settings.app_password_hash.startswith("scrypt$"):
+        return _wealth_tracker_password_matches(settings.app_password_hash, password)
     if settings.app_password_hash:
         return check_password_hash(settings.app_password_hash, password)
     return not settings.app_password or password == settings.app_password
+
+
+def _wealth_tracker_password_matches(stored: str, password: str) -> bool:
+    """Checks a Wealth Tracker hash ("scrypt$N$r$p$salt$hash", base64), so both apps share one password."""
+    try:
+        _, n, r, p, salt, expected = stored.split("$")
+        expected_key = base64.b64decode(expected)
+        key = hashlib.scrypt(
+            password.encode(),
+            salt=base64.b64decode(salt),
+            n=int(n),
+            r=int(r),
+            p=int(p),
+            maxmem=256 * int(n) * int(r),
+            dklen=len(expected_key),
+        )
+    except ValueError:
+        return False
+    return hmac.compare_digest(key, expected_key)
 
 
 def main() -> None:
