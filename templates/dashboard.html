@@ -80,7 +80,7 @@
       </div>
       <div class="panel-average-stat activity">
         <strong>{{ averages.activity }}</strong>
-        <small>kcal/day</small>
+        <small>{{ t.kcal_per_day }}</small>
       </div>
     </div>
     <div class="chart-wrap compact">
@@ -100,7 +100,7 @@
       </div>
       <div class="panel-average-stat {{ 'positive' if average_deficit >= 0 else 'negative' }}">
         <strong>{{ average_deficit if average_deficit >= 0 else -average_deficit }}</strong>
-        <small>kcal/day</small>
+        <small>{{ t.kcal_per_day }}</small>
       </div>
     </div>
     <div class="chart-wrap compact">

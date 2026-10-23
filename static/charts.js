@@ -103,8 +103,8 @@
 
   function renderEnergyChart(container, rows) {
     if (!container) return;
-    const width = Math.max(container.clientWidth, 320);
-    const height = 318;
+    const width = Math.max(container.clientWidth, 240);
+    const height = container.clientHeight || 318;
     const pad = { top: 26, right: 18, bottom: 46, left: 52 };
     const plotRows = dataRows(rows, [
       { key: "food" },
@@ -149,7 +149,7 @@
     const xLabelsAndTicks = rows
       .map((row, index) => {
         const p = point(row, index, rows, "burned", width, height, pad, 0, niceMax);
-        const label = index % labelEvery === 0 || index === rows.length - 1
+        const label = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1
           ? `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
           : "";
         const tick = row.has_data === false
@@ -213,8 +213,8 @@
 
   function renderActivityChart(container, rows) {
     if (!container) return;
-    const width = Math.max(container.clientWidth, 320);
-    const height = 238;
+    const width = Math.max(container.clientWidth, 240);
+    const height = container.clientHeight || 238;
     const pad = { top: 24, right: 20, bottom: 42, left: 48 };
     const plotRows = dataRows(rows, [{ key: "activity" }]);
 
@@ -247,7 +247,7 @@
     const bars = rows
       .map((row, index) => {
         const x = pad.left + (rows.length <= 1 ? chartWidth / 2 : chartWidth * (index / (rows.length - 1)));
-        const label = index % labelEvery === 0 || index === rows.length - 1
+        const label = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1
           ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
           : "";
         if (row.has_data === false) {
@@ -293,8 +293,8 @@
 
   function renderDeficitChart(container, rows) {
     if (!container) return;
-    const width = Math.max(container.clientWidth, 320);
-    const height = 238;
+    const width = Math.max(container.clientWidth, 240);
+    const height = container.clientHeight || 238;
     const pad = { top: 24, right: 20, bottom: 42, left: 58 };
     const plotRows = dataRows(rows, [{ key: "deficit" }]);
 
@@ -331,7 +331,7 @@
     const bars = rows
       .map((row, index) => {
         const x = pad.left + (rows.length <= 1 ? chartWidth / 2 : chartWidth * (index / (rows.length - 1)));
-        const label = index % labelEvery === 0 || index === rows.length - 1
+        const label = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1
           ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
           : "";
         if (row.has_data === false) {
@@ -381,8 +381,8 @@
 
   function renderWeightChart(container, rows) {
     if (!container) return;
-    const width = Math.max(container.clientWidth, 320);
-    const height = 238;
+    const width = Math.max(container.clientWidth, 240);
+    const height = container.clientHeight || 238;
     const pad = { top: 24, right: 20, bottom: 42, left: 48 };
     const plotRows = rows.filter((row) => row.has_data !== false && row.weight);
 
@@ -458,10 +458,18 @@
     );
   }
 
+  // Today usually has no entry yet; don't leave an empty slot at the end of every chart.
+  function withoutTrailingEmptyDays(rows) {
+    let end = rows.length;
+    while (end > 1 && rows[end - 1].has_data === false) end -= 1;
+    return rows.slice(0, end);
+  }
+
   function renderAll() {
-    renderEnergyChart(document.getElementById("calorieChart"), window.MYDIET_TRENDS || []);
-    renderActivityChart(document.getElementById("activityChart"), window.MYDIET_TRENDS || []);
-    renderDeficitChart(document.getElementById("deficitChart"), window.MYDIET_TRENDS || []);
+    const trends = withoutTrailingEmptyDays(window.MYDIET_TRENDS || []);
+    renderEnergyChart(document.getElementById("calorieChart"), trends);
+    renderActivityChart(document.getElementById("activityChart"), trends);
+    renderDeficitChart(document.getElementById("deficitChart"), trends);
     renderWeightChart(document.getElementById("weightChart"), window.MYDIET_WEIGHTS || []);
   }
 
