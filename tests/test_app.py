@@ -11,7 +11,7 @@ from mydiet.app import (
     _weight_series,
     create_app,
 )
-from mydiet.firestore_db import MemoryDietRepository
+from mydiet.storage import MemoryDietRepository
 from mydiet.nutrition import date_window
 from mydiet.settings import Settings
 from werkzeug.security import generate_password_hash

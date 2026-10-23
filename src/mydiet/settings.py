@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     single_user_id: str = Field(default="halil", alias="SINGLE_USER_ID")
     use_memory_repository: bool = Field(default=False, alias="USE_MEMORY_REPOSITORY")
+    database_path: Path = Field(default=Path("data/mydiet.db"), alias="MYDIET_DB")
 
     @cached_property
     def app_config(self) -> dict[str, Any]:
@@ -68,14 +69,6 @@ class Settings(BaseSettings):
     @property
     def timezone(self) -> str:
         return str(self.app_config.get("timezone") or "Europe/Amsterdam")
-
-    @property
-    def firestore_project_for_env(self) -> str:
-        return str(self.app_config.get("google_cloud_project") or "")
-
-    @property
-    def firestore_database_for_env(self) -> str:
-        return str(self.app_config.get("firestore_database") or "")
 
 
 @lru_cache(maxsize=1)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-time setup on the Ubuntu server that already runs Wealth Tracker behind Caddy:
 #   ssh ubuntu@SERVER 'bash -s' < deploy/install.sh
-# Then put the env file at /etc/mydiet.env and the Firestore key at /var/lib/mydiet/service-account.json.
+# Then put the env file at /etc/mydiet.env; data lives in /var/lib/mydiet/mydiet.db (SQLite).
 set -euo pipefail
 # SSH URL: the repo is private; the server reads it with a read-only deploy key (see README).
 REPO="${REPO:-git@github.com:halilayyildiz/mydiet.git}"
@@ -40,5 +40,5 @@ grep -q mydiet.halilayyildiz.com /etc/caddy/Caddyfile || { echo; cat deploy/Cadd
 # The Wealth block takes its domain from the env var Caddy gets from systemd.
 sudo env $(sed -n "s/^Environment=//p" /etc/systemd/system/caddy.service.d/*.conf) caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 
-echo "Installed. Next: /etc/mydiet.env (mode 640, group mydiet) and /var/lib/mydiet/service-account.json,"
+echo "Installed. Next: /etc/mydiet.env (mode 640, group mydiet),"
 echo "then: sudo systemctl enable --now mydiet && sudo systemctl reload caddy"

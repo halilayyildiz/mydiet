@@ -6,15 +6,5 @@
     "allowed_upload_extensions": ["jpg", "jpeg", "png", "webp"],
     "max_upload_mb": 8,
     "timezone": "Europe/Amsterdam"
-  },
-  "environments": {
-    "staging": {
-      "google_cloud_project": "mydiet-499222",
-      "firestore_database": "mydiet-db-prod"
-    },
-    "prod": {
-      "google_cloud_project": "mydiet-499222",
-      "firestore_database": "mydiet-db-prod"
-    }
   }
 }

@@ -20,7 +20,7 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 
-from mydiet.firestore_db import DietRepository, MemoryDietRepository
+from mydiet.storage import DietRepository, MemoryDietRepository
 from mydiet.gemini_client import GeminiDietClient
 from mydiet.nutrition import (
     RANGE_OPTIONS,
