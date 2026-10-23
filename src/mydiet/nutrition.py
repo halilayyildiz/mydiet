@@ -83,15 +83,10 @@ def fallback_analysis(
     reason: str = "Set ANTHROPIC_API_KEY to calculate from diary text and images.",
     language: str = "en",
 ) -> dict[str, Any]:
-    weight = _number(profile.get("weight_kg")) or 80
-    height = _number(profile.get("height_cm")) or 175
-    age = _number(profile.get("age")) or 35
-    gender = str(profile.get("gender") or "").lower()
-    bmr = 10 * weight + 6.25 * height - 5 * age + (5 if gender == "male" else -161)
     food = _rough_food_calories(diary_text)
     food_items = _rough_food_items(diary_text, food)
     activity = _rough_activity_calories(diary_text)
-    burned = round(max(bmr * 1.25 + activity, 1200))
+    burned = estimated_burned_calories(profile, activity)
     summary = "Saved without Claude analysis. Values are rough placeholders."
     if language == "tr":
         summary = "Claude analizi olmadan kaydedildi. Değerler yaklaşık yer tutuculardır."
@@ -108,6 +103,45 @@ def fallback_analysis(
         "summary": summary,
         "assumptions": [reason],
     }
+
+
+def analysis_from_items(
+    profile: dict[str, Any],
+    *,
+    food_items: Any,
+    activity_calories: Any = 0,
+    burned_calories: Any = None,
+    summary: str = "",
+    assumptions: Any = None,
+) -> dict[str, Any]:
+    """An analysis built from calories already worked out elsewhere (e.g. a Claude chat)."""
+    items = _food_items(food_items)
+    food = sum(item["calories"] for item in items)
+    activity = _number(activity_calories)
+    burned = _number(burned_calories) or estimated_burned_calories(profile, activity)
+    return {
+        "food_calories": food,
+        "food_items": items,
+        "activity_calories": activity,
+        "burned_calories": burned,
+        "calorie_deficit": burned - food,
+        "protein_g": sum(item["protein_g"] for item in items),
+        "carbs_g": sum(item["carbs_g"] for item in items),
+        "fat_g": sum(item["fat_g"] for item in items),
+        "confidence": "high",
+        "summary": summary,
+        "assumptions": _string_list(assumptions),
+    }
+
+
+def estimated_burned_calories(profile: dict[str, Any], activity_calories: int) -> int:
+    """Mifflin-St Jeor BMR with a light-activity factor, plus logged exercise."""
+    weight = _number(profile.get("weight_kg")) or 80
+    height = _number(profile.get("height_cm")) or 175
+    age = _number(profile.get("age")) or 35
+    gender = str(profile.get("gender") or "").lower()
+    bmr = 10 * weight + 6.25 * height - 5 * age + (5 if gender == "male" else -161)
+    return round(max(bmr * 1.25 + activity_calories, 1200))
 
 
 def now_utc() -> datetime:

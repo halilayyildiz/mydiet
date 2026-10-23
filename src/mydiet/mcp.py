@@ -1,4 +1,5 @@
-"""A small MCP server (streamable HTTP, JSON responses) so a Claude chat can log meals here.
+"""A small MCP server (streamable HTTP, JSON responses) so a Claude chat can save the days it
+already worked out (foods, calories, activity) here.
 
 claude.ai connects to https://<host>/mcp/<MCP_TOKEN>; the secret path is the only credential.
 """
@@ -13,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Flask, Response, abort, jsonify, request
 
-from mydiet.claude_client import analyze_entry
+from mydiet.nutrition import analysis_from_items
 from mydiet.settings import Settings
 from mydiet.storage import DietRepository, MemoryDietRepository
 
@@ -25,30 +26,52 @@ _DATE = {
     "description": "Day as YYYY-MM-DD. Defaults to today in the user's timezone (Europe/Amsterdam).",
 }
 
+_FOOD_ITEM = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string", "description": "Short name in Turkish, e.g. \"2 haşlanmış yumurta\"."},
+        "meal": {"type": "string", "enum": ["morning", "lunch", "dinner", "snacks"]},
+        "calories": {"type": "number"},
+        "protein_g": {"type": "number"},
+        "carbs_g": {"type": "number"},
+        "fat_g": {"type": "number"},
+    },
+    "required": ["name", "meal", "calories"],
+}
+
 TOOLS = [
     {
-        "name": "log_food",
+        "name": "save_day",
         "description": (
-            "Add what the user ate or did (food, drinks, exercise) to a day's diary in MyDiet. "
-            "The text is appended to that day's existing notes and the whole day is re-analyzed for "
-            "calories and macros. Use the user's own words; pass only the new items, not the whole day."
+            "Save a day in MyDiet with the calories you already worked out in this chat. Send the "
+            "WHOLE day every time (every food and drink so far, not just the new ones): it replaces "
+            "what is stored for that date, so calling it again after each meal is safe. Totals and "
+            "the deficit are computed from the items. Call get_day first if the day may hold items "
+            "you don't know about."
         ),
         "inputSchema": {
             "type": "object",
-            "properties": {"text": {"type": "string", "description": "New diary text."}, "date": _DATE},
-            "required": ["text"],
-        },
-    },
-    {
-        "name": "set_day",
-        "description": (
-            "Replace a day's whole diary text in MyDiet and re-analyze it. Use to correct a day; "
-            "call get_day first so nothing already logged is lost."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "properties": {"text": {"type": "string", "description": "The full diary for the day."}, "date": _DATE},
-            "required": ["text"],
+            "properties": {
+                "date": _DATE,
+                "diary_text": {
+                    "type": "string",
+                    "description": "What the user wrote about the day, in their words (shown as the day's notes).",
+                },
+                "food_items": {"type": "array", "items": _FOOD_ITEM},
+                "activity_calories": {
+                    "type": "number",
+                    "description": "Calories burned by exercise and activity beyond normal daily life.",
+                },
+                "burned_calories": {
+                    "type": "number",
+                    "description": (
+                        "Total calories burned that day (BMR + activity). Omit to let MyDiet estimate it "
+                        "from the profile plus activity_calories."
+                    ),
+                },
+                "summary": {"type": "string", "description": "One or two sentences on the day, in Turkish."},
+            },
+            "required": ["diary_text", "food_items"],
         },
     },
     {
@@ -96,33 +119,26 @@ def register_mcp(app: Flask, repo: DietRepository | MemoryDietRepository, settin
         except ValueError:
             raise ToolError(f"Invalid date {value!r}; use YYYY-MM-DD.") from None
 
-    def save_day(entry_date: str, diary_text: str) -> dict[str, Any]:
+    def save_day(args: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(args.get("food_items"), list):
+            raise ToolError("food_items must be a list.")
+        entry_date = day(args)
         entry = repo.get_entry(user_id, entry_date)
-        analysis = analyze_entry(
-            settings,
-            diary_text=diary_text,
-            profile=repo.get_profile(user_id),
-            entry_date=entry_date,
-            image_paths=[],
-            language="tr",
+        analysis = analysis_from_items(
+            repo.get_profile(user_id),
+            food_items=args["food_items"],
+            activity_calories=args.get("activity_calories"),
+            burned_calories=args.get("burned_calories"),
+            summary=str(args.get("summary") or ""),
         )
+        diary_text = str(args.get("diary_text") or "").strip()
         repo.save_entry(
             user_id,
             entry_date,
             {"diary_text": diary_text, "image_urls": entry.get("image_urls") or [], "analysis": analysis},
         )
-        return {"date": entry_date, "diary_text": diary_text, "analysis": analysis}
-
-    def log_food(args: dict[str, Any]) -> dict[str, Any]:
-        text = str(args.get("text") or "").strip()
-        if not text:
-            raise ToolError("text is empty.")
-        entry_date = day(args)
-        existing = str(repo.get_entry(user_id, entry_date).get("diary_text") or "").strip()
-        return save_day(entry_date, f"{existing}\n{text}" if existing else text)
-
-    def set_day(args: dict[str, Any]) -> dict[str, Any]:
-        return save_day(day(args), str(args.get("text") or "").strip())
+        totals = {key: analysis[key] for key in ("food_calories", "burned_calories", "calorie_deficit")}
+        return {"date": entry_date, "saved_items": len(analysis["food_items"]), **totals}
 
     def get_day(args: dict[str, Any]) -> dict[str, Any]:
         entry_date = day(args)
@@ -156,8 +172,7 @@ def register_mcp(app: Flask, repo: DietRepository | MemoryDietRepository, settin
         return {"date": entry_date, "weight_kg": weight_kg}
 
     handlers: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
-        "log_food": log_food,
-        "set_day": set_day,
+        "save_day": save_day,
         "get_day": get_day,
         "list_days": list_days,
         "log_weight": log_weight,

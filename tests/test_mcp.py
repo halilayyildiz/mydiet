@@ -35,29 +35,66 @@ def test_wrong_token_is_not_found_and_needs_no_login() -> None:
 def test_tools_list_names_every_tool() -> None:
     response = _client().post("/mcp/tok", json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     names = {tool["name"] for tool in response.get_json()["result"]["tools"]}
-    assert names == {"log_food", "set_day", "get_day", "list_days", "log_weight"}
+    assert names == {"save_day", "get_day", "list_days", "log_weight"}
 
 
-def test_log_food_appends_to_the_day_and_analyzes_it() -> None:
+def test_save_day_stores_chat_calories_and_replaces_the_day() -> None:
     repo = MemoryDietRepository()
     client = _client(repo)
+    breakfast = {"name": "2 yumurta", "meal": "morning", "calories": 150, "protein_g": 12, "fat_g": 10}
 
-    _call(client, "log_food", {"text": "2 yumurta", "date": "2026-10-23"})
-    result = _call(client, "log_food", {"text": "1 elma", "date": "2026-10-23"})
+    _call(client, "save_day", {"date": "2026-10-23", "diary_text": "2 yumurta", "food_items": [breakfast]})
+    result = _call(
+        client,
+        "save_day",
+        {
+            "date": "2026-10-23",
+            "diary_text": "2 yumurta, öğlen tavuk salata, 30 dk koşu",
+            "food_items": [
+                breakfast,
+                {"name": "tavuk salata", "meal": "lunch", "calories": 450, "protein_g": 35, "carbs_g": 20},
+            ],
+            "activity_calories": 300,
+            "burned_calories": 2500,
+            "summary": "Dengeli gün.",
+        },
+    )
 
-    payload = json.loads(result["content"][0]["text"])
-    assert payload["diary_text"] == "2 yumurta\n1 elma"
-    assert repo.get_entry("halil", "2026-10-23")["analysis"]["food_calories"] >= 0
+    assert json.loads(result["content"][0]["text"]) == {
+        "date": "2026-10-23",
+        "saved_items": 2,
+        "food_calories": 600,
+        "burned_calories": 2500,
+        "calorie_deficit": 1900,
+    }
+    analysis = repo.get_entry("halil", "2026-10-23")["analysis"]
+    assert analysis["protein_g"] == 47
+    assert analysis["activity_calories"] == 300
+    assert analysis["summary"] == "Dengeli gün."
     day = json.loads(_call(client, "get_day", {"date": "2026-10-23"})["content"][0]["text"])
-    assert day["diary_text"] == "2 yumurta\n1 elma"
+    assert day["diary_text"] == "2 yumurta, öğlen tavuk salata, 30 dk koşu"
     days = json.loads(
         _call(client, "list_days", {"start_date": "2026-10-01", "end_date": "2026-10-31"})["content"][0]["text"]
     )
-    assert [item["date"] for item in days["days"]] == ["2026-10-23"]
+    assert days["days"] == [
+        {"date": "2026-10-23", "food_calories": 600, "burned_calories": 2500, "calorie_deficit": 1900}
+    ]
+
+
+def test_save_day_estimates_burned_calories_from_profile() -> None:
+    repo = MemoryDietRepository()
+    repo.save_profile("halil", {"weight_kg": 90, "height_cm": 180, "age": 40, "gender": "male"})
+    _call(
+        _client(repo),
+        "save_day",
+        {"diary_text": "x", "food_items": [], "activity_calories": 200, "date": "2026-10-23"},
+    )
+    # BMR 1830 * 1.25 + 200
+    assert repo.get_entry("halil", "2026-10-23")["analysis"]["burned_calories"] == 2488
 
 
 def test_bad_date_is_a_tool_error() -> None:
-    result = _call(_client(), "log_food", {"text": "çay", "date": "dün"})
+    result = _call(_client(), "save_day", {"diary_text": "çay", "food_items": [], "date": "dün"})
     assert result["isError"] is True
 
 

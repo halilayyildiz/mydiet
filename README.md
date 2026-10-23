@@ -45,8 +45,9 @@ Generate `APP_PASSWORD_HASH` with:
 
 ## Claude connector
 
-`/mcp/<MCP_TOKEN>` is a small MCP server (tools `log_food`, `set_day`, `get_day`, `list_days`,
-`log_weight`) so a claude.ai chat can log meals directly. Set `MCP_TOKEN` to a long random string and add
+`/mcp/<MCP_TOKEN>` is a small MCP server (tools `save_day`, `get_day`, `list_days`, `log_weight`) so the
+claude.ai chat where meals are discussed can save each day with the calories it already worked out;
+MyDiet only sums them up (no second analysis). Set `MCP_TOKEN` to a long random string and add
 `https://mydiet.halilayyildiz.com/mcp/<MCP_TOKEN>` in claude.ai → Settings → Connectors → Add custom connector.
 The secret path is the only credential, so keep the URL private.
 
