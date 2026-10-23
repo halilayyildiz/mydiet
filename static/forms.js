@@ -117,3 +117,20 @@
     });
   });
 })();
+
+// "Copy demo link" in the account menu: copy, then confirm in place for a moment.
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-copy-link]");
+  if (!button) return;
+  const label = button.textContent;
+  try {
+    await navigator.clipboard.writeText(button.dataset.copyLink);
+  } catch {
+    window.prompt("", button.dataset.copyLink);
+    return;
+  }
+  button.textContent = `✓ ${button.dataset.copiedLabel}`;
+  setTimeout(() => {
+    button.textContent = label;
+  }, 1600);
+});

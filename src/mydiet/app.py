@@ -41,7 +41,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261024-5"
+ASSET_VERSION = "20261024-6"
 
 TEXTS = {
     "en": {
@@ -102,6 +102,8 @@ TEXTS = {
         "demo_exit": "Exit demo",
         "demo_read_only": "This is a read-only demo.",
         "try_demo": "Try the demo",
+        "copy_demo_link": "Copy demo link",
+        "link_copied": "Link copied",
         "log_weight": "Log weight",
         "logging": "Logging...",
         "logging_weight": "Logging your weight.",
@@ -210,6 +212,8 @@ TEXTS = {
         "demo_exit": "Demodan çık",
         "demo_read_only": "Bu demo sadece görüntüleme içindir.",
         "try_demo": "Demoyu dene",
+        "copy_demo_link": "Demo linkini kopyala",
+        "link_copied": "Link kopyalandı",
         "log_weight": "Kilo gir",
         "logging": "Kaydediliyor...",
         "logging_weight": "Kilon kaydediliyor.",
