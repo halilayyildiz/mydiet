@@ -384,7 +384,9 @@
     const width = Math.max(container.clientWidth, 240);
     const height = container.clientHeight || 238;
     const pad = { top: 24, right: 20, bottom: 42, left: 48 };
-    const plotRows = rows.filter((row) => row.has_data !== false && row.weight);
+    // Days without a weigh-in carry the last weight: they shape the line but get no dot.
+    const plotRows = rows.filter((row) => row.weight);
+    const measuredRows = plotRows.filter((row) => row.has_data !== false);
 
     if (!plotRows.length) {
       container.innerHTML = `<div class="empty-chart">${escapeHtml(text.weightEmpty)}</div>`;
@@ -416,7 +418,7 @@
       })
       .join("");
 
-    const dots = plotRows
+    const dots = measuredRows
       .map((row) => {
         const sourceIndex = rows.indexOf(row);
         const p = point(row, sourceIndex, rows, "weight", width, height, pad, min, max);
@@ -426,7 +428,8 @@
 
     const xLabels = rows
       .map((row, index) => {
-        if (index % labelEvery !== 0 && index !== rows.length - 1) return "";
+        const isLabel = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1;
+        if (!isLabel) return "";
         const p = point(row, index, rows, "weight", width, height, pad, min, max);
         return `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`;
       })
@@ -442,7 +445,7 @@
     `;
     attachTooltip(
       container,
-      plotRows.map((row) => {
+      measuredRows.map((row) => {
         const sourceIndex = rows.indexOf(row);
         const p = point(row, sourceIndex, rows, "weight", width, height, pad, min, max);
         return {

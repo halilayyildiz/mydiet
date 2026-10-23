@@ -154,8 +154,8 @@ def test_dashboard_weight_series_uses_selected_range() -> None:
     response = app.test_client().get("/?range=30d")
 
     assert response.status_code == 200
-    assert b'"weight": 82.4' in response.data
-    assert b'"weight": 90.0' not in response.data
+    assert b'"has_data": true, "weight": 82.4' in response.data
+    assert b'"has_data": true, "weight": 90.0' not in response.data
     assert f'"date": "{date_window(30)[0]}"'.encode() in response.data
 
 
@@ -172,10 +172,10 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20261024-1" in response.data
-    assert b"/static/favicon.svg?v=20261024-1" in response.data
-    assert b"/static/charts.js?v=20261024-1" in response.data
-    assert b"/static/dashboard.js?v=20261024-1" in response.data
+    assert b"/static/styles.css?v=20261024-2" in response.data
+    assert b"/static/favicon.svg?v=20261024-2" in response.data
+    assert b"/static/charts.js?v=20261024-2" in response.data
+    assert b"/static/dashboard.js?v=20261024-2" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -235,6 +235,20 @@ def test_weight_series_uses_full_selected_date_window() -> None:
     assert series[0] == {"date": "2026-06-11", "has_data": False}
     assert series[1] == {"date": "2026-06-12", "has_data": False}
     assert series[2] == {"date": "2026-06-13", "has_data": True, "weight": 82.4}
+
+
+def test_weight_series_carries_the_last_known_weight_forward() -> None:
+    series = _weight_series(
+        ["2026-06-11", "2026-06-12", "2026-06-13"],
+        [{"date": "2026-06-12", "weight_kg": 82.4}],
+        previous_weight=83.0,
+    )
+
+    assert series == [
+        {"date": "2026-06-11", "has_data": False, "weight": 83.0},
+        {"date": "2026-06-12", "has_data": True, "weight": 82.4},
+        {"date": "2026-06-13", "has_data": False, "weight": 82.4},
+    ]
 
 
 def test_entry_post_saves_fallback_analysis() -> None:
@@ -417,7 +431,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20261024-1" in response.data
+    assert b"/static/forms.js?v=20261024-2" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -647,7 +661,7 @@ def test_login_form_includes_username_field() -> None:
     assert b'name="username"' in response.data
     assert b'value="halil"' in response.data
     assert b'autocomplete="username"' in response.data
-    assert b"/static/favicon.svg?v=20261024-1" in response.data
+    assert b"/static/favicon.svg?v=20261024-2" in response.data
     assert b'href="/register"' in response.data
 
 

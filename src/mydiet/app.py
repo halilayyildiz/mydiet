@@ -40,7 +40,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261024-1"
+ASSET_VERSION = "20261024-2"
 
 TEXTS = {
     "en": {
@@ -435,6 +435,12 @@ def create_app(
             start_date=dates[0],
             end_date=dates[-1],
         )
+        earlier_weights = repo.list_weight_logs(
+            _current_user_id(settings),
+            start_date="0000-01-01",
+            end_date=(parse_iso_date(dates[0]) - timedelta(days=1)).isoformat(),
+        )
+        previous_weight = float(earlier_weights[-1].get("weight_kg") or 0) if earlier_weights else None
         month = request.args.get("month") or today[:7]
         month_dates = month_window(month, timezone_name=settings.timezone)
         month_entries = repo.list_entries(
@@ -454,7 +460,7 @@ def create_app(
             balance=_balance_summary(averages),
             recorded_days=len(entries),
             chart_range_label=_date_range_label(dates[0], dates[-1], lang=_current_lang()),
-            weight_series=_weight_series(dates, weights),
+            weight_series=_weight_series(dates, weights, previous_weight=previous_weight),
             calendar_days=_calendar_days(month_dates, month_entries),
             current_month=month,
             previous_month=_shift_month(month, -1),
@@ -719,21 +725,26 @@ def _trend_series(dates: list[str], entries: list[dict[str, Any]]) -> list[dict[
     return series
 
 
-def _weight_series(dates: list[str], weights: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _weight_series(
+    dates: list[str],
+    weights: list[dict[str, Any]],
+    *,
+    previous_weight: float | None = None,
+) -> list[dict[str, Any]]:
+    """One row per day; days without a weigh-in carry the last known weight so the line is continuous."""
     by_date = {item.get("date"): item for item in weights}
     series: list[dict[str, Any]] = []
+    last_weight = previous_weight or None
     for date_key in dates:
         item = by_date.get(date_key)
         if not item or not item.get("weight_kg"):
-            series.append({"date": date_key, "has_data": False})
+            row: dict[str, Any] = {"date": date_key, "has_data": False}
+            if last_weight:
+                row["weight"] = last_weight
+            series.append(row)
             continue
-        series.append(
-            {
-                "date": date_key,
-                "has_data": True,
-                "weight": float(item.get("weight_kg") or 0),
-            }
-        )
+        last_weight = float(item.get("weight_kg") or 0)
+        series.append({"date": date_key, "has_data": True, "weight": last_weight})
     return series
 
 
