@@ -2,19 +2,21 @@
 already worked out (foods, calories, activity) here.
 
 claude.ai connects to https://<host>/mcp/<MCP_TOKEN>; the secret path is the only credential.
+An iPhone Shortcut posts the scale's Apple Health weight to /api/<MCP_TOKEN>/weight with the same secret.
 """
 
 from __future__ import annotations
 
 import hmac
 import json
+import re
 from datetime import date, datetime
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 from flask import Flask, Response, abort, jsonify, request
 
-from mydiet.nutrition import analysis_from_items
+from mydiet.nutrition import analysis_from_items, compute_bmr_calories
 from mydiet.settings import Settings
 from mydiet.storage import DietRepository, MemoryDietRepository
 
@@ -168,8 +170,13 @@ def register_mcp(app: Flask, repo: DietRepository | MemoryDietRepository, settin
         except (KeyError, TypeError, ValueError):
             raise ToolError("weight_kg must be a number.") from None
         entry_date = day(args)
-        repo.save_weight(user_id, entry_date, weight_kg)
+        record_weight(entry_date, weight_kg)
         return {"date": entry_date, "weight_kg": weight_kg}
+
+    def record_weight(entry_date: str, weight_kg: float) -> None:
+        repo.save_weight(user_id, entry_date, weight_kg)
+        profile = {**repo.get_profile(user_id), "weight_kg": weight_kg}
+        repo.save_profile(user_id, {"bmr_calories": compute_bmr_calories(profile, use_stored=False)})
 
     handlers: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
         "save_day": save_day,
@@ -225,6 +232,34 @@ def register_mcp(app: Flask, repo: DietRepository | MemoryDietRepository, settin
             return jsonify(_error(None, -32700, "Parse error")), 400
         reply = handle(payload)
         return jsonify(reply) if reply else Response(status=202)
+
+    @app.post("/api/<token>/weight", endpoint="weight_api")
+    def weight_api(token: str) -> Any:
+        if not settings.mcp_token or not hmac.compare_digest(token, settings.mcp_token):
+            abort(404)
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            payload = request.form.to_dict()
+        try:
+            weight_kg = _shortcut_weight(payload.get("weight_kg"))
+            if not 20 <= weight_kg <= 400:
+                raise ToolError("weight_kg must be between 20 and 400.")
+            # Shortcuts' ISO 8601 date is local time with an offset, so its first 10 characters are the day.
+            entry_date = day({"date": str(payload.get("date") or "")[:10]})
+        except ToolError as exc:
+            return jsonify({"error": str(exc)}), 400
+        record_weight(entry_date, weight_kg)
+        return jsonify({"date": entry_date, "weight_kg": weight_kg})
+
+
+def _shortcut_weight(value: Any) -> float:
+    """Shortcuts may send 82.4, "82,4" (Turkish locale) or "82.4 kg"."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    match = re.search(r"\d+(?:[.,]\d+)?", str(value or ""))
+    if not match:
+        raise ToolError("weight_kg must be a number.")
+    return float(match.group().replace(",", "."))
 
 
 def _error(message_id: Any, code: int, text: str) -> dict[str, Any]:

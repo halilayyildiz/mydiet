@@ -51,6 +51,13 @@ MyDiet only sums them up (no second analysis). Set `MCP_TOKEN` to a long random 
 `https://mydiet.halilayyildiz.com/mcp/<MCP_TOKEN>` in claude.ai → Settings → Connectors → Add custom connector.
 The secret path is the only credential, so keep the URL private.
 
+## Apple Health weight
+
+`POST /api/<MCP_TOKEN>/weight` with JSON `{"weight_kg": 82.4, "date": "2026-10-24"}` logs a weigh-in
+(same day again replaces it; `date` defaults to today and may be a full ISO 8601 timestamp). A daily iPhone
+Shortcut automation reads the latest Weight sample from Health and posts it here, so a smart scale that
+syncs to Apple Health ends up in MyDiet with no extra service.
+
 ## Demo
 
 `/demo` opens a read-only demo with made-up data: 90 days of someone going from 101 kg to 92 kg, with a few

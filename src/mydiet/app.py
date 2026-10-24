@@ -339,7 +339,7 @@ def create_app(
 
     @app.before_request
     def load_preferred_language() -> None:
-        if session.get("lang") in TEXTS or request.endpoint in {"static", "uploaded_file", "mcp"}:
+        if session.get("lang") in TEXTS or request.endpoint in {"static", "uploaded_file", "mcp", "weight_api"}:
             return
         if not session.get("user_id"):
             if not settings.use_memory_repository or settings.app_password or settings.app_password_hash:
@@ -365,6 +365,7 @@ def create_app(
             "static",
             "uploaded_file",
             "mcp",
+            "weight_api",
             "demo",
             "demo_exit",
         }:

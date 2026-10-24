@@ -102,3 +102,20 @@ def test_log_weight_records_weight() -> None:
     repo = MemoryDietRepository()
     _call(_client(repo), "log_weight", {"weight_kg": 84.2, "date": "2026-10-23"})
     assert repo.get_profile("halil")["weight_kg"] == 84.2
+
+
+def test_weight_api_records_a_shortcut_weigh_in() -> None:
+    repo = MemoryDietRepository()
+    client = _client(repo)
+    response = client.post("/api/tok/weight", json={"weight_kg": "82,4 kg", "date": "2026-10-24T08:12:00+02:00"})
+    assert response.status_code == 200
+    assert response.get_json() == {"date": "2026-10-24", "weight_kg": 82.4}
+    assert repo.list_weight_logs("halil", start_date="2026-10-24", end_date="2026-10-24")[0]["weight_kg"] == 82.4
+    assert repo.get_profile("halil")["weight_kg"] == 82.4
+
+
+def test_weight_api_rejects_bad_token_and_bad_weight() -> None:
+    client = _client()
+    assert client.post("/api/nope/weight", json={"weight_kg": 80}).status_code == 404
+    assert client.post("/api/tok/weight", json={"weight_kg": "abc"}).status_code == 400
+    assert client.post("/api/tok/weight", json={"weight_kg": 5}).status_code == 400
