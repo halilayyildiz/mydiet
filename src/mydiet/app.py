@@ -42,6 +42,7 @@ from mydiet.settings import Settings, get_settings
 
 
 ASSET_VERSION = "20261024-6"
+SESSION_LIFETIME = timedelta(days=365)
 
 TEXTS = {
     "en": {
@@ -301,6 +302,12 @@ def create_app(
     _validate_runtime_settings(settings)
     app = Flask(__name__, static_folder="../../static", template_folder="../../templates")
     app.config["SECRET_KEY"] = settings.flask_secret_key
+    # Stay signed in: the cookie lasts a year and every visit pushes the expiry forward.
+    # A plain browser-session cookie is dropped whenever iOS closes the home-screen app.
+    app.config["PERMANENT_SESSION_LIFETIME"] = SESSION_LIFETIME
+    app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = settings.app_env.lower() in {"prod", "production"}
     app.config["MAX_CONTENT_LENGTH"] = settings.max_upload_bytes
     app.config["UPLOAD_DIR"] = settings.upload_dir
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
@@ -336,6 +343,11 @@ def create_app(
             "username": _current_user_id(settings),
             "demo": is_demo(),
         }
+
+    @app.before_request
+    def keep_session_alive() -> None:
+        if not session.permanent:
+            session.permanent = True
 
     @app.before_request
     def load_preferred_language() -> None:

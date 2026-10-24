@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from io import BytesIO
 from pathlib import Path
 
@@ -574,6 +576,27 @@ def test_login_post_accepts_configured_password() -> None:
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/profile"
+
+
+def test_login_session_is_long_lived_and_refreshed() -> None:
+    settings = Settings(
+        APP_ENV="test",
+        APP_PASSWORD="secret",
+        APP_PASSWORD_HASH="",
+        FLASK_SECRET_KEY="test",
+        ANTHROPIC_API_KEY="",
+        SINGLE_USER_ID="halil",
+        USE_MEMORY_REPOSITORY=True,
+    )
+    client = create_app(settings=settings, repository=MemoryDietRepository()).test_client()
+
+    login = client.post("/login", data={"username": "halil", "password": "secret"})
+    later = client.get("/profile")
+
+    for response in (login, later):
+        cookie = response.headers["Set-Cookie"]
+        expires = parsedate_to_datetime(cookie.split("Expires=")[1].split(";")[0])
+        assert expires > datetime.now(timezone.utc) + timedelta(days=360)
 
 
 def test_production_requires_secure_secret() -> None:
