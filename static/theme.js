@@ -3,38 +3,27 @@
   const metas = document.querySelectorAll('meta[name="theme-color"]');
   const buttons = document.querySelectorAll("[data-theme-choice]");
 
-  function current() {
-    return root.dataset.theme || "auto";
-  }
-
   function paint() {
-    const choice = current();
     buttons.forEach((button) => {
-      button.classList.toggle("active", button.dataset.themeChoice === choice);
+      button.classList.toggle("active", button.dataset.themeChoice === root.dataset.theme);
     });
-    // A picked theme overrides the phone's setting, so the status bar must follow it too.
+    // The theme can differ from the phone's setting, so the status bar follows the page.
     const paper = getComputedStyle(root).getPropertyValue("--paper").trim();
     metas.forEach((meta) => {
-      if (!meta.dataset.media) {
-        meta.dataset.media = meta.media;
-        meta.dataset.color = meta.content;
-      }
-      meta.media = choice === "auto" ? meta.dataset.media : "all";
-      meta.content = choice === "auto" ? meta.dataset.color : paper;
+      meta.media = "all";
+      meta.content = paper;
     });
   }
 
   buttons.forEach((button) => {
     button.addEventListener("click", () => {
       const choice = button.dataset.themeChoice;
-      if (choice === current()) return;
+      if (choice === root.dataset.theme) return;
       try {
-        if (choice === "auto") localStorage.removeItem("mydiet-theme");
-        else localStorage.setItem("mydiet-theme", choice);
+        localStorage.setItem("mydiet-theme", choice);
       } catch (error) {}
+      root.dataset.theme = choice;
       // Charts read their colors once on load, so reload to redraw them in the new theme.
-      if (choice === "auto") delete root.dataset.theme;
-      else root.dataset.theme = choice;
       if (document.querySelector(".svg-chart")) {
         window.location.reload();
         return;

@@ -12,12 +12,14 @@
     <meta name="apple-mobile-web-app-title" content="MyDiet">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#111514" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
     <script>
       try {
         var savedTheme = localStorage.getItem("mydiet-theme");
-        if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
       } catch (error) {}
+      document.documentElement.dataset.theme =
+        savedTheme === "light" || savedTheme === "dark" ? savedTheme
+        : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>

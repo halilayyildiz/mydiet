@@ -41,7 +41,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261027-5"
+ASSET_VERSION = "20261027-6"
 SESSION_LIFETIME = timedelta(days=365)
 
 TEXTS = {
@@ -78,7 +78,6 @@ TEXTS = {
         "kcal_per_day": "kcal/day",
         "language": "Language",
         "theme": "Theme",
-        "theme_auto": "Auto",
         "theme_light": "Light",
         "theme_dark": "Dark",
         "date": "Date",
@@ -212,7 +211,6 @@ TEXTS = {
         "kcal_per_day": "kcal/gün",
         "language": "Dil",
         "theme": "Tema",
-        "theme_auto": "Oto",
         "theme_light": "Açık",
         "theme_dark": "Koyu",
         "last_days": "Son {days} gün",
