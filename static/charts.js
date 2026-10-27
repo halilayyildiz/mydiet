@@ -231,7 +231,7 @@
     const chartHeight = height - pad.top - pad.bottom;
     const baseY = height - pad.bottom;
     const slot = chartWidth / Math.max(rows.length, 1);
-    const barWidth = Math.max(2, Math.min(24, slot * 0.6));
+    const barWidth = Math.max(1.5, Math.min(12, slot * 0.4));
     const ticks = Array.from({ length: niceMax / 200 + 1 }, (_, index) => index * 200).reverse();
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
@@ -262,7 +262,7 @@
         const barHeight = Math.max(4, (activity / niceMax) * chartHeight);
         const y = baseY - barHeight;
         return `
-          <rect data-chart-index="${index}" class="health-bar health-bar-activity" x="${x - barWidth / 2}" y="${y}" width="${barWidth}" height="${barHeight}" rx="${Math.min(7, barWidth / 2)}" fill="${colors.activity}" opacity="0.9"></rect>
+          <rect data-chart-index="${index}" class="health-bar health-bar-activity" x="${x - barWidth / 2}" y="${y}" width="${barWidth}" height="${barHeight}" rx="${Math.min(3, barWidth / 2)}" fill="${colors.activity}" opacity="0.9"></rect>
           ${label}
         `;
       })
@@ -312,7 +312,7 @@
     const chartHeight = height - pad.top - pad.bottom;
     const zeroY = point({ deficit: 0 }, 0, [0], "deficit", width, height, pad, -niceMax, niceMax).y;
     const slot = chartWidth / Math.max(rows.length, 1);
-    const barWidth = Math.max(2, Math.min(24, slot * 0.6));
+    const barWidth = Math.max(1.5, Math.min(12, slot * 0.4));
     const ticks = [];
     for (let tick = niceMax; tick >= -niceMax; tick -= tickStep) {
       ticks.push(tick);
@@ -348,7 +348,7 @@
         const barY = deficit >= 0 ? y : zeroY;
         const fill = deficit >= 0 ? colors.burned : colors.red;
         return `
-          <rect data-chart-index="${index}" class="health-bar health-bar-deficit" x="${x - barWidth / 2}" y="${barY}" width="${barWidth}" height="${barHeight}" rx="${Math.min(7, barWidth / 2)}" fill="${fill}" opacity="0.9"></rect>
+          <rect data-chart-index="${index}" class="health-bar health-bar-deficit" x="${x - barWidth / 2}" y="${barY}" width="${barWidth}" height="${barHeight}" rx="${Math.min(3, barWidth / 2)}" fill="${fill}" opacity="0.9"></rect>
           ${label}
         `;
       })

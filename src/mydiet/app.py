@@ -41,7 +41,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261027-3"
+ASSET_VERSION = "20261027-4"
 SESSION_LIFETIME = timedelta(days=365)
 
 TEXTS = {
