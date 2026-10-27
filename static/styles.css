@@ -27,8 +27,9 @@
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%237a8581' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
+/* Dark: follows the phone unless the menu picked a theme (data-theme on <html>) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --ink: #e6ebe8;
     --muted: #8d9894;
@@ -51,6 +52,30 @@
     --on-accent: #0d1a15;
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238d9894' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e6ebe8;
+  --muted: #8d9894;
+  --faint: #5f6a66;
+  --line: #262d2b;
+  --paper: #111514;
+  --panel: #181d1c;
+  --sunken: #1e2423;
+  --green: #5cbf9a;
+  --green-strong: #4aa886;
+  --green-soft: rgba(92, 191, 154, 0.12);
+  --red: #e88a7f;
+  --red-soft: rgba(232, 138, 127, 0.12);
+  --blue: #7eaee0;
+  --coral: #eb9f80;
+  --track: #252c2a;
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --focus: rgba(92, 191, 154, 0.22);
+  --on-accent: #0d1a15;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238d9894' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 * {
@@ -259,12 +284,20 @@ h2 {
 
 .language-switch {
   align-items: center;
-  border-bottom: 1px solid var(--line);
   border-top: 1px solid var(--line);
   display: flex !important;
   justify-content: space-between;
   margin: 2px 0;
   padding: 8px 4px 8px 10px;
+}
+
+.language-switch + .language-switch {
+  border-top: 0;
+  margin-top: -2px;
+}
+
+.language-switch:not(:has(+ .language-switch)) {
+  border-bottom: 1px solid var(--line);
 }
 
 .language-switch > span {

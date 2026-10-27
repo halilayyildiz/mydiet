@@ -13,6 +13,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#111514" media="(prefers-color-scheme: dark)">
+    <script>
+      try {
+        var savedTheme = localStorage.getItem("mydiet-theme");
+        if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
+      } catch (error) {}
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>
   <body>
@@ -36,6 +42,14 @@
               <button class="{{ 'active' if lang == 'en' else '' }}" type="submit" name="lang" value="en">EN</button>
             </div>
           </form>
+          <div class="language-switch" role="group" aria-label="{{ t.theme }}" data-theme-switch>
+            <span>{{ t.theme }}</span>
+            <div class="segmented">
+              <button class="active" type="button" data-theme-choice="auto">{{ t.theme_auto }}</button>
+              <button type="button" data-theme-choice="light">{{ t.theme_light }}</button>
+              <button type="button" data-theme-choice="dark">{{ t.theme_dark }}</button>
+            </div>
+          </div>
           <button type="button" data-copy-link="{{ url_for('demo', _external=True) }}" data-copied-label="{{ t.link_copied }}">{{ t.copy_demo_link }}</button>
           <form action="{{ url_for('logout') }}" method="post">
             <button class="menu-logout" type="submit">{{ t.log_out }}</button>
@@ -69,6 +83,7 @@
       window.MYDIET_FORM_TEXT = {{ {"saving": t.saving} | tojson }};
     </script>
     <script src="{{ url_for('static', filename='forms.js', v=asset_version) }}" defer></script>
+    <script src="{{ url_for('static', filename='theme.js', v=asset_version) }}" defer></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>
