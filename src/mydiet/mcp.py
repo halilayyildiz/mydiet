@@ -242,24 +242,33 @@ def register_mcp(app: Flask, repo: DietRepository | MemoryDietRepository, settin
             payload = request.form.to_dict()
         try:
             weight_kg = _shortcut_weight(payload.get("weight_kg"))
-            if not 20 <= weight_kg <= 400:
-                raise ToolError("weight_kg must be between 20 and 400.")
             # Shortcuts' ISO 8601 date is local time with an offset, so its first 10 characters are the day.
             entry_date = day({"date": str(payload.get("date") or "")[:10]})
         except ToolError as exc:
+            app.logger.warning("weight_api rejected %r: %s", payload, exc)
             return jsonify({"error": str(exc)}), 400
         record_weight(entry_date, weight_kg)
         return jsonify({"date": entry_date, "weight_kg": weight_kg})
 
 
 def _shortcut_weight(value: Any) -> float:
-    """Shortcuts may send 82.4, "82,4" (Turkish locale) or "82.4 kg"."""
+    """Shortcuts may send 82.4, "82,4" (Turkish locale), "82.4 kg", "181 lb", or a whole sample as text
+    (dates and all); pick the number that looks like a body weight and convert it to kg."""
     if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return float(value)
-    match = re.search(r"\d+(?:[.,]\d+)?", str(value or ""))
-    if not match:
-        raise ToolError("weight_kg must be a number.")
-    return float(match.group().replace(",", "."))
+        candidates = [(float(value), "")]
+    else:
+        text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
+        candidates = [
+            (float(number.replace(",", ".")), unit.lower())
+            for number, unit in re.findall(r"(\d+(?:[.,]\d+)?)\s*(kg|lbs?|g)?(?![a-z])", text, re.IGNORECASE)
+        ]
+    to_kg = {"": 1.0, "kg": 1.0, "lb": 0.45359237, "lbs": 0.45359237, "g": 0.001}
+    weights = [round(number * to_kg[unit], 2) for number, unit in candidates]
+    tagged = [weight for weight, (_, unit) in zip(weights, candidates) if unit]
+    for weight in tagged + weights:
+        if 20 <= weight <= 400:
+            return weight
+    raise ToolError(f"weight_kg must be a body weight between 20 and 400 kg; got {value!r}.")
 
 
 def _error(message_id: Any, code: int, text: str) -> dict[str, Any]:

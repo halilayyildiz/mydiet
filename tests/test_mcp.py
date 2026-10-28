@@ -119,3 +119,18 @@ def test_weight_api_rejects_bad_token_and_bad_weight() -> None:
     assert client.post("/api/nope/weight", json={"weight_kg": 80}).status_code == 404
     assert client.post("/api/tok/weight", json={"weight_kg": "abc"}).status_code == 400
     assert client.post("/api/tok/weight", json={"weight_kg": 5}).status_code == 400
+
+
+def test_weight_api_finds_the_weight_in_shortcut_text() -> None:
+    client = _client()
+    for sent, expected in [
+        ("28 Eki 2026 08:12 82,4 kg", 82.4),
+        ("181.5 lb", 82.33),
+        (82400, None),
+        ({"value": 82.4, "unit": "kg"}, 82.4),
+    ]:
+        response = client.post("/api/tok/weight", json={"weight_kg": sent, "date": "2026-10-28"})
+        if expected is None:
+            assert response.status_code == 400 and "82400" in response.get_json()["error"]
+        else:
+            assert response.get_json()["weight_kg"] == expected, sent
