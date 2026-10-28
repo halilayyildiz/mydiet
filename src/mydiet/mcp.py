@@ -78,7 +78,7 @@ TOOLS = [
     },
     {
         "name": "get_day",
-        "description": "Read a day's diary text and its calorie/macro analysis from MyDiet.",
+        "description": "Read a day's diary text, its calorie/macro analysis and the weight logged that day from MyDiet.",
         "inputSchema": {"type": "object", "properties": {"date": _DATE}},
     },
     {
@@ -145,9 +145,16 @@ def register_mcp(app: Flask, repo: DietRepository | MemoryDietRepository, settin
     def get_day(args: dict[str, Any]) -> dict[str, Any]:
         entry_date = day(args)
         entry = repo.get_entry(user_id, entry_date)
+        weights = repo.list_weight_logs(user_id, start_date=entry_date, end_date=entry_date)
+        weight = {"weight_kg": weights[-1].get("weight_kg")} if weights else {}
         if not entry:
-            return {"date": entry_date, "logged": False}
-        return {"date": entry_date, "diary_text": entry.get("diary_text", ""), "analysis": entry.get("analysis")}
+            return {"date": entry_date, "logged": False, **weight}
+        return {
+            "date": entry_date,
+            "diary_text": entry.get("diary_text", ""),
+            "analysis": entry.get("analysis"),
+            **weight,
+        }
 
     def list_days(args: dict[str, Any]) -> dict[str, Any]:
         start, end = day({"date": args.get("start_date")}), day({"date": args.get("end_date")})

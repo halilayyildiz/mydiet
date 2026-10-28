@@ -134,3 +134,10 @@ def test_weight_api_finds_the_weight_in_shortcut_text() -> None:
             assert response.status_code == 400 and "82400" in response.get_json()["error"]
         else:
             assert response.get_json()["weight_kg"] == expected, sent
+
+
+def test_get_day_includes_the_days_weight() -> None:
+    client = _client()
+    client.post("/api/tok/weight", json={"weight_kg": 81.9, "date": "2026-10-28"})
+    result = json.loads(_call(client, "get_day", {"date": "2026-10-28"})["content"][0]["text"])
+    assert result["weight_kg"] == 81.9
