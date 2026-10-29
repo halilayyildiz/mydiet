@@ -101,6 +101,18 @@
     return { x, y };
   }
 
+  function tickStepFor(span) {
+    return [100, 200, 250, 500, 1000, 2000, 5000].find((step) => step >= span / 5) || 10000;
+  }
+
+  function axisTicks(min, max, step) {
+    const ticks = [];
+    for (let tick = Math.floor(max / step) * step; tick >= min; tick -= step) {
+      ticks.push(tick);
+    }
+    return ticks;
+  }
+
   function renderEnergyChart(container, rows) {
     if (!container) return;
     const dotRadius = rows.length > 20 ? 0 : 3.6;
@@ -119,17 +131,20 @@
     }
 
     const values = plotRows.flatMap((row) => [Number(row.food || 0), Number(row.burned || 0)]);
-    const maxValue = Math.max(...values, 100);
-    const niceMax = Math.ceil(maxValue / 500) * 500;
+    const dataMax = Math.max(...values);
+    const dataMin = Math.min(...values);
+    const margin = Math.max(100, (dataMax - dataMin) * 0.12);
+    const niceMax = dataMax + margin;
+    const niceMin = Math.max(0, dataMin - margin);
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
     const baseY = height - pad.bottom;
-    const ticks = Array.from({ length: niceMax / 500 + 1 }, (_, index) => index * 500).reverse();
+    const ticks = axisTicks(niceMin, niceMax, tickStepFor(niceMax - niceMin));
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
     const grid = ticks
       .map((tick) => {
-        const y = pad.top + chartHeight - (tick / niceMax) * chartHeight;
+        const y = pad.top + chartHeight - ((tick - niceMin) / (niceMax - niceMin)) * chartHeight;
         return `
           <line x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}" class="health-grid-line"></line>
           <text x="8" y="${y + 4}" class="chart-axis-label">${formatValue(tick)}</text>
@@ -141,7 +156,7 @@
       return plotRows
         .map((row, pathIndex) => {
           const sourceIndex = rows.indexOf(row);
-          const p = point(row, sourceIndex, rows, key, width, height, pad, 0, niceMax);
+          const p = point(row, sourceIndex, rows, key, width, height, pad, niceMin, niceMax);
           return `${pathIndex === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
         })
         .join(" ");
@@ -149,7 +164,7 @@
 
     const xLabelsAndTicks = rows
       .map((row, index) => {
-        const p = point(row, index, rows, "burned", width, height, pad, 0, niceMax);
+        const p = point(row, index, rows, "burned", width, height, pad, niceMin, niceMax);
         const label = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1
           ? `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
           : "";
@@ -163,8 +178,8 @@
     const dots = plotRows
       .flatMap((row) => {
         const sourceIndex = rows.indexOf(row);
-        const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, 0, niceMax);
-        const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, 0, niceMax);
+        const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, niceMin, niceMax);
+        const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, niceMin, niceMax);
         return [
           `<circle data-chart-index="${sourceIndex}" cx="${burnedPoint.x}" cy="${burnedPoint.y}" r="${dotRadius}" fill="${colors.burned}" class="health-dot health-dot-burned"></circle>`,
           `<circle data-chart-index="${sourceIndex}" cx="${foodPoint.x}" cy="${foodPoint.y}" r="${dotRadius}" fill="${colors.food}" class="health-dot health-dot-food"></circle>`,
@@ -175,8 +190,8 @@
     const points = plotRows
       .map((row, index) => {
         const sourceIndex = rows.indexOf(row);
-        const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, 0, niceMax);
-        const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, 0, niceMax);
+        const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, niceMin, niceMax);
+        const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, niceMin, niceMax);
         const burned = Number(row.burned || 0);
         return {
           index: sourceIndex,
@@ -304,24 +319,23 @@
       return;
     }
 
-    const values = plotRows.map((row) => Math.abs(Number(row.deficit || 0)));
-    const maxValue = Math.max(...values, 100);
-    const tickStep = 500;
-    const niceMax = Math.max(tickStep, Math.ceil(maxValue / tickStep) * tickStep);
+    const values = plotRows.map((row) => Number(row.deficit || 0));
+    const dataMax = Math.max(...values, 0);
+    const dataMin = Math.min(...values, 0);
+    const margin = Math.max(50, (dataMax - dataMin) * 0.1);
+    const niceMax = dataMax > 0 ? dataMax + margin : margin / 2;
+    const niceMin = dataMin < 0 ? dataMin - margin : -margin / 2;
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
-    const zeroY = point({ deficit: 0 }, 0, [0], "deficit", width, height, pad, -niceMax, niceMax).y;
+    const zeroY = point({ deficit: 0 }, 0, [0], "deficit", width, height, pad, niceMin, niceMax).y;
     const slot = chartWidth / Math.max(rows.length, 1);
     const barWidth = Math.max(1.5, Math.min(12, slot * 0.4));
-    const ticks = [];
-    for (let tick = niceMax; tick >= -niceMax; tick -= tickStep) {
-      ticks.push(tick);
-    }
+    const ticks = axisTicks(niceMin, niceMax, tickStepFor(niceMax - niceMin));
     const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
 
     const grid = ticks
       .map((tick) => {
-        const y = point({ deficit: tick }, 0, [0], "deficit", width, height, pad, -niceMax, niceMax).y;
+        const y = point({ deficit: tick }, 0, [0], "deficit", width, height, pad, niceMin, niceMax).y;
         return `
           <line x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}" class="${tick === 0 ? "health-zero-line" : "health-grid-line"}"></line>
           <text x="8" y="${y + 4}" class="chart-axis-label">${formatValue(tick)}</text>
@@ -343,7 +357,7 @@
         }
 
         const deficit = Number(row.deficit || 0);
-        const y = point(row, index, rows, "deficit", width, height, pad, -niceMax, niceMax).y;
+        const y = point(row, index, rows, "deficit", width, height, pad, niceMin, niceMax).y;
         const barHeight = Math.max(4, Math.abs(y - zeroY));
         const barY = deficit >= 0 ? y : zeroY;
         const fill = deficit >= 0 ? colors.burned : colors.red;
@@ -356,7 +370,7 @@
 
     const points = plotRows.map((row) => {
       const sourceIndex = rows.indexOf(row);
-      const p = point(row, sourceIndex, rows, "deficit", width, height, pad, -niceMax, niceMax);
+      const p = point(row, sourceIndex, rows, "deficit", width, height, pad, niceMin, niceMax);
       const deficit = Number(row.deficit || 0);
       const color = deficit >= 0 ? colors.burned : colors.red;
       const label = deficit >= 0 ? text.deficit : text.surplus;
