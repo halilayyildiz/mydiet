@@ -115,7 +115,7 @@
 
   function renderEnergyChart(container, rows) {
     if (!container) return;
-    const dotRadius = rows.length > 20 ? 0 : 3.6;
+    const dotRadius = rows.length > 20 ? 2.4 : 3.6;
     const width = Math.max(container.clientWidth, 240);
     const height = container.clientHeight || 318;
     const pad = { top: 26, right: 18, bottom: 46, left: 52 };
@@ -396,7 +396,7 @@
 
   function renderWeightChart(container, rows) {
     if (!container) return;
-    const dotRadius = rows.length > 20 ? 0 : 3.6;
+    const dotRadius = rows.length > 20 ? 2.4 : 3.6;
     const width = Math.max(container.clientWidth, 240);
     const height = container.clientHeight || 238;
     const pad = { top: 24, right: 20, bottom: 42, left: 48 };
