@@ -35,7 +35,7 @@ def test_wrong_token_is_not_found_and_needs_no_login() -> None:
 def test_tools_list_names_every_tool() -> None:
     response = _client().post("/mcp/tok", json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     names = {tool["name"] for tool in response.get_json()["result"]["tools"]}
-    assert names == {"save_day", "get_day", "list_days", "log_weight"}
+    assert names == {"save_day", "get_day", "list_days", "log_weight", "list_weights"}
 
 
 def test_save_day_stores_chat_calories_and_replaces_the_day() -> None:
@@ -102,6 +102,19 @@ def test_log_weight_records_weight() -> None:
     repo = MemoryDietRepository()
     _call(_client(repo), "log_weight", {"weight_kg": 84.2, "date": "2026-10-23"})
     assert repo.get_profile("halil")["weight_kg"] == 84.2
+
+
+def test_list_weights_returns_range_and_change() -> None:
+    repo = MemoryDietRepository()
+    for entry_date, kg in [("2026-10-20", 85.0), ("2026-10-24", 92.85), ("2026-10-28", 91.9)]:
+        repo.save_weight("halil", entry_date, kg)
+    result = json.loads(
+        _call(_client(repo), "list_weights", {"start_date": "2026-10-21", "end_date": "2026-10-31"})["content"][0]["text"]
+    )
+    assert result == {
+        "weights": [{"date": "2026-10-24", "weight_kg": 92.85}, {"date": "2026-10-28", "weight_kg": 91.9}],
+        "change_kg": -0.95,
+    }
 
 
 def test_weight_api_records_a_shortcut_weigh_in() -> None:

@@ -102,6 +102,21 @@ TOOLS = [
             "required": ["weight_kg"],
         },
     },
+    {
+        "name": "list_weights",
+        "description": (
+            "Body weight logged for each day in a date range (from the scale's daily iPhone Shortcut or log_weight), "
+            "oldest first, plus the change over the range."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "start_date": {"type": "string", "description": "YYYY-MM-DD"},
+                "end_date": {"type": "string", "description": "YYYY-MM-DD. Defaults to today."},
+            },
+            "required": ["start_date"],
+        },
+    },
 ]
 
 
@@ -180,6 +195,15 @@ def register_mcp(app: Flask, repo: DietRepository | MemoryDietRepository, settin
         record_weight(entry_date, weight_kg)
         return {"date": entry_date, "weight_kg": weight_kg}
 
+    def list_weights(args: dict[str, Any]) -> dict[str, Any]:
+        start, end = day({"date": args.get("start_date")}), day({"date": args.get("end_date")})
+        logs = repo.list_weight_logs(user_id, start_date=start, end_date=end)
+        weights = [{"date": log.get("date"), "weight_kg": log.get("weight_kg")} for log in logs]
+        result: dict[str, Any] = {"weights": weights}
+        if len(weights) > 1:
+            result["change_kg"] = round(weights[-1]["weight_kg"] - weights[0]["weight_kg"], 2)
+        return result
+
     def record_weight(entry_date: str, weight_kg: float) -> None:
         repo.save_weight(user_id, entry_date, weight_kg)
         profile = {**repo.get_profile(user_id), "weight_kg": weight_kg}
@@ -190,6 +214,7 @@ def register_mcp(app: Flask, repo: DietRepository | MemoryDietRepository, settin
         "get_day": get_day,
         "list_days": list_days,
         "log_weight": log_weight,
+        "list_weights": list_weights,
     }
 
     def call_tool(params: dict[str, Any]) -> dict[str, Any]:
