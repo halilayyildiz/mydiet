@@ -23,8 +23,25 @@
     ...(window.MYDIET_CHART_TEXT || {}),
   };
 
+  const lang = document.documentElement.lang || undefined;
+
   function formatValue(value) {
-    return Math.round(Number(value || 0)).toLocaleString();
+    return Math.round(Number(value || 0)).toLocaleString(lang);
+  }
+
+  function tooltipHtml(date, items) {
+    const parsed = new Date(`${date}T00:00:00`);
+    const day = `${parsed.toLocaleDateString(lang, { day: "numeric", month: "short", year: "numeric" })} · ${parsed.toLocaleDateString(lang, { weekday: "long" })}`;
+    const lines = items
+      .map((item) => `
+        <span class="chart-tooltip-row">
+          <i style="background:${item.color}"></i>
+          <span>${escapeHtml(item.label)}</span>
+          <b>${escapeHtml(item.value)}</b>
+        </span>
+      `)
+      .join("");
+    return `<strong>${escapeHtml(day)}</strong>${lines}`;
   }
 
   function escapeHtml(value) {
@@ -46,24 +63,40 @@
     return tooltip;
   }
 
-  function attachTooltip(container, points) {
+  function attachTooltip(container, points, pad) {
     const tooltip = ensureTooltip(container);
+    let guide = container.querySelector(".chart-guide");
+    if (!guide) {
+      guide = document.createElement("div");
+      guide.className = "chart-guide";
+      guide.hidden = true;
+      container.appendChild(guide);
+    }
 
     function hide() {
       tooltip.hidden = true;
-      tooltip.classList.remove("below");
+      guide.hidden = true;
       container.querySelectorAll(".is-active").forEach((node) => node.classList.remove("is-active"));
     }
 
+    // The card sits beside a vertical guide line, so it never covers the day it describes.
     function show(point) {
+      const gap = 12;
       tooltip.innerHTML = point.html;
       tooltip.hidden = false;
-      const left = Math.min(Math.max(point.x, 86), container.clientWidth - 86);
-      const tooltipHeight = tooltip.offsetHeight || 96;
-      const shouldOpenBelow = point.y - tooltipHeight - 22 < 0;
+      guide.hidden = false;
+      guide.style.left = `${point.x}px`;
+      guide.style.top = `${pad.top - 8}px`;
+      guide.style.height = `${container.clientHeight - pad.top - pad.bottom + 8}px`;
+
+      const width = tooltip.offsetWidth;
+      const height = tooltip.offsetHeight;
+      const fitsRight = point.x + gap + width <= container.clientWidth;
+      const left = fitsRight ? point.x + gap : Math.max(0, point.x - gap - width);
+      const top = Math.min(Math.max(point.y - height / 2, 0), Math.max(0, container.clientHeight - pad.bottom - height));
       tooltip.style.left = `${left}px`;
-      tooltip.style.top = `${shouldOpenBelow ? point.y + 14 : point.y - 14}px`;
-      tooltip.classList.toggle("below", shouldOpenBelow);
+      tooltip.style.top = `${top}px`;
+
       container.querySelectorAll(".is-active").forEach((node) => node.classList.remove("is-active"));
       container.querySelectorAll(`[data-chart-index="${point.index}"]`).forEach((node) => {
         node.classList.add("is-active");
@@ -113,9 +146,33 @@
     return ticks;
   }
 
+  function dotRadiusFor(count) {
+    if (count > 120) return 1.5;
+    return count > 20 ? 2.4 : 3.6;
+  }
+
+  // A year of days is too dense for the per-day ring around dots and the empty-day ticks.
+  function isDense(rows) {
+    return rows.length > 120;
+  }
+
+  // Long ranges label month starts with the month name; shorter ones label every few days by day number.
+  function xLabelFor(rows, index, every, width) {
+    const row = rows[index];
+    if (isDense(rows)) {
+      if (row.date.slice(8) !== "01") return "";
+      // Twelve month names don't fit side by side on a phone: show every other one there.
+      if (width < 560 && Number(row.date.slice(5, 7)) % 2 === 0) return "";
+      return new Date(`${row.date}T00:00:00`).toLocaleDateString(document.documentElement.lang || undefined, { month: "short" });
+    }
+    const isLabel = (index % every === 0 && rows.length - 1 - index >= every / 2) || index === rows.length - 1;
+    return isLabel ? String(Number(row.date.slice(8))) : "";
+  }
+
   function renderEnergyChart(container, rows) {
     if (!container) return;
-    const dotRadius = rows.length > 20 ? 2.4 : 3.6;
+    const dotRadius = dotRadiusFor(rows.length);
+    const denseClass = isDense(rows) ? " health-dot-dense" : "";
     const width = Math.max(container.clientWidth, 240);
     const height = container.clientHeight || 318;
     const pad = { top: 26, right: 18, bottom: 46, left: 52 };
@@ -165,10 +222,9 @@
     const xLabelsAndTicks = rows
       .map((row, index) => {
         const p = point(row, index, rows, "burned", width, height, pad, niceMin, niceMax);
-        const label = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1
-          ? `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
-          : "";
-        const tick = row.has_data === false
+        const labelText = xLabelFor(rows, index, labelEvery, width);
+        const label = labelText ? `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${escapeHtml(labelText)}</text>` : "";
+        const tick = row.has_data === false && !isDense(rows)
           ? `<line x1="${p.x}" y1="${baseY - 8}" x2="${p.x}" y2="${baseY}" class="health-empty-tick"></line>`
           : "";
         return `${tick}${label}`;
@@ -181,8 +237,8 @@
         const burnedPoint = point(row, sourceIndex, rows, "burned", width, height, pad, niceMin, niceMax);
         const foodPoint = point(row, sourceIndex, rows, "food", width, height, pad, niceMin, niceMax);
         return [
-          `<circle data-chart-index="${sourceIndex}" cx="${burnedPoint.x}" cy="${burnedPoint.y}" r="${dotRadius}" fill="${colors.burned}" class="health-dot health-dot-burned"></circle>`,
-          `<circle data-chart-index="${sourceIndex}" cx="${foodPoint.x}" cy="${foodPoint.y}" r="${dotRadius}" fill="${colors.food}" class="health-dot health-dot-food"></circle>`,
+          `<circle data-chart-index="${sourceIndex}" cx="${burnedPoint.x}" cy="${burnedPoint.y}" r="${dotRadius}" fill="${colors.burned}" class="health-dot health-dot-burned${denseClass}"></circle>`,
+          `<circle data-chart-index="${sourceIndex}" cx="${foodPoint.x}" cy="${foodPoint.y}" r="${dotRadius}" fill="${colors.food}" class="health-dot health-dot-food${denseClass}"></circle>`,
         ];
       })
       .join("");
@@ -197,11 +253,10 @@
           index: sourceIndex,
           x: burnedPoint.x,
           y: Math.min(burnedPoint.y, foodPoint.y),
-          html: `
-            <strong>${escapeHtml(row.date)}</strong>
-            <span><i style="background:${colors.burned}"></i>${escapeHtml(text.burned)} ${formatValue(burned)} kcal</span>
-            <span><i style="background:${colors.food}"></i>${escapeHtml(text.consumed)} ${formatValue(row.food)} kcal</span>
-          `,
+          html: tooltipHtml(row.date, [
+            { color: colors.burned, label: text.burned, value: `${formatValue(burned)} kcal` },
+            { color: colors.food, label: text.consumed, value: `${formatValue(row.food)} kcal` },
+          ]),
         };
       });
 
@@ -214,7 +269,7 @@
         ${xLabelsAndTicks}
       </svg>
     `;
-    attachTooltip(container, points);
+    attachTooltip(container, points, pad);
   }
 
   function pathFor(rows, key, width, height, pad, min, max) {
@@ -263,10 +318,10 @@
     const bars = rows
       .map((row, index) => {
         const x = pad.left + (rows.length <= 1 ? chartWidth / 2 : chartWidth * (index / (rows.length - 1)));
-        const label = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1
-          ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
-          : "";
+        const labelText = xLabelFor(rows, index, labelEvery, width);
+        const label = labelText ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${escapeHtml(labelText)}</text>` : "";
         if (row.has_data === false) {
+          if (isDense(rows)) return label;
           return `
             <line x1="${x}" y1="${baseY - 8}" x2="${x}" y2="${baseY}" class="health-empty-tick"></line>
             ${label}
@@ -291,10 +346,9 @@
         index: sourceIndex,
         x,
         y,
-        html: `
-          <strong>${escapeHtml(row.date)}</strong>
-          <span><i style="background:${colors.activity}"></i>${escapeHtml(text.activity)} ${formatValue(row.activity)} kcal</span>
-        `,
+        html: tooltipHtml(row.date, [
+          { color: colors.activity, label: text.activity, value: `${formatValue(row.activity)} kcal` },
+        ]),
       };
     });
 
@@ -304,7 +358,7 @@
         ${bars}
       </svg>
     `;
-    attachTooltip(container, points);
+    attachTooltip(container, points, pad);
   }
 
   function renderDeficitChart(container, rows) {
@@ -346,10 +400,10 @@
     const bars = rows
       .map((row, index) => {
         const x = pad.left + (rows.length <= 1 ? chartWidth / 2 : chartWidth * (index / (rows.length - 1)));
-        const label = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1
-          ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`
-          : "";
+        const labelText = xLabelFor(rows, index, labelEvery, width);
+        const label = labelText ? `<text x="${x}" y="${height - 14}" class="chart-x-label">${escapeHtml(labelText)}</text>` : "";
         if (row.has_data === false) {
+          if (isDense(rows)) return label;
           return `
             <line x1="${x}" y1="${zeroY - 5}" x2="${x}" y2="${zeroY + 5}" class="health-empty-tick"></line>
             ${label}
@@ -378,10 +432,9 @@
         index: sourceIndex,
         x: p.x,
         y: p.y,
-        html: `
-          <strong>${escapeHtml(row.date)}</strong>
-          <span><i style="background:${color}"></i>${label} ${formatValue(Math.abs(deficit))} kcal</span>
-        `,
+        html: tooltipHtml(row.date, [
+          { color, label, value: `${formatValue(Math.abs(deficit))} kcal` },
+        ]),
       };
     });
 
@@ -391,12 +444,13 @@
         ${bars}
       </svg>
     `;
-    attachTooltip(container, points);
+    attachTooltip(container, points, pad);
   }
 
   function renderWeightChart(container, rows) {
     if (!container) return;
-    const dotRadius = rows.length > 20 ? 2.4 : 3.6;
+    const dotRadius = dotRadiusFor(rows.length);
+    const denseClass = isDense(rows) ? " health-dot-dense" : "";
     const width = Math.max(container.clientWidth, 240);
     const height = container.clientHeight || 238;
     const pad = { top: 24, right: 20, bottom: 42, left: 48 };
@@ -439,16 +493,16 @@
       .map((row) => {
         const sourceIndex = rows.indexOf(row);
         const p = point(row, sourceIndex, rows, "weight", width, height, pad, min, max);
-        return `<circle data-chart-index="${sourceIndex}" cx="${p.x}" cy="${p.y}" r="${dotRadius}" fill="${colors.burned}" class="health-dot"></circle>`;
+        return `<circle data-chart-index="${sourceIndex}" cx="${p.x}" cy="${p.y}" r="${dotRadius}" fill="${colors.burned}" class="health-dot${denseClass}"></circle>`;
       })
       .join("");
 
     const xLabels = rows
       .map((row, index) => {
-        const isLabel = (index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || index === rows.length - 1;
-        if (!isLabel) return "";
+        const labelText = xLabelFor(rows, index, labelEvery, width);
+        if (!labelText) return "";
         const p = point(row, index, rows, "weight", width, height, pad, min, max);
-        return `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${Number(row.date.slice(8))}</text>`;
+        return `<text x="${p.x}" y="${height - 14}" class="chart-x-label">${escapeHtml(labelText)}</text>`;
       })
       .join("");
 
@@ -469,12 +523,12 @@
           index: sourceIndex,
           x: p.x,
           y: p.y,
-          html: `
-            <strong>${escapeHtml(row.date)}</strong>
-            <span><i style="background:${colors.burned}"></i>${escapeHtml(text.weight)} ${Number(row.weight).toFixed(1)} kg</span>
-          `,
+          html: tooltipHtml(row.date, [
+            { color: colors.burned, label: text.weight, value: `${Number(row.weight).toLocaleString(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg` },
+          ]),
         };
       }),
+      pad,
     );
   }
 

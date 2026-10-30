@@ -6,10 +6,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 RANGE_OPTIONS = {
-    "7d": 7,
     "14d": 14,
     "30d": 30,
     "90d": 90,
+    "365d": 365,
 }
 
 BMR_ACTIVITY_MULTIPLIERS = {

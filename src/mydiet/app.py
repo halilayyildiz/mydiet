@@ -41,7 +41,7 @@ from mydiet.nutrition import (
 from mydiet.settings import Settings, get_settings
 
 
-ASSET_VERSION = "20261030-1"
+ASSET_VERSION = "20261030-2"
 SESSION_LIFETIME = timedelta(days=365)
 
 TEXTS = {
@@ -101,6 +101,8 @@ TEXTS = {
         "height": "Height",
         "high": "High",
         "last_days": "Last {days} days",
+        "last_year": "Last year",
+        "one_year": "1 year",
         "log_out": "Log out",
         "demo_banner": "Demo: made-up data, read-only.",
         "demo_exit": "Exit demo",
@@ -214,6 +216,8 @@ TEXTS = {
         "theme_light": "Açık",
         "theme_dark": "Koyu",
         "last_days": "Son {days} gün",
+        "last_year": "Son 1 yıl",
+        "one_year": "1 yıl",
         "log_out": "Çıkış",
         "demo_banner": "Demo: örnek veriler, sadece görüntüleme.",
         "demo_exit": "Demodan çık",
@@ -496,7 +500,9 @@ def create_app(
     @app.get("/")
     def dashboard() -> str:
         range_key = request.args.get("range", "14d")
-        days = RANGE_OPTIONS.get(range_key, 14)
+        if range_key not in RANGE_OPTIONS:
+            range_key = "14d"
+        days = RANGE_OPTIONS[range_key]
         today = today_iso(settings.timezone)
         dates = date_window(days, timezone_name=settings.timezone)
         entries = repo.list_entries(_current_user_id(settings), start_date=dates[0], end_date=dates[-1])

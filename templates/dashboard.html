@@ -10,7 +10,7 @@
     <form class="range-control" method="get">
       {% for key, days in range_options.items() %}
         <button name="range" value="{{ key }}" class="{{ 'selected' if range_key == key else '' }}">
-          {{ days }} {{ t.days }}
+          {{ t.one_year if days == 365 else days ~ ' ' ~ t.days }}
         </button>
       {% endfor %}
     </form>
@@ -58,7 +58,7 @@
   <section class="chart-section">
     <div class="section-heading">
       <div>
-        <h2>{{ t.last_days.format(days=range_options[range_key]) }}</h2>
+        <h2>{{ t.last_year if range_options[range_key] == 365 else t.last_days.format(days=range_options[range_key]) }}</h2>
         <p class="section-subtitle">{{ chart_range_label }} · {{ recorded_days }} {{ t.recorded_days }}</p>
       </div>
       <a href="{{ url_for('entry_form', date=today) }}">{{ t.add_today }}</a>
