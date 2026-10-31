@@ -35,7 +35,7 @@ def test_demo_is_separate_from_real_data_and_read_only() -> None:
     assert response.status_code == 302
     dashboard = client.get("/?range=90d")
     assert dashboard.status_code == 200
-    assert "Demodan çık".encode() in dashboard.data
+    assert b"Exit demo" in dashboard.data
 
     client.post("/weight", data={"date": "2026-10-24", "weight_kg": "80"})
     assert repo.get_profile(DEMO_USER) == {}
@@ -43,3 +43,26 @@ def test_demo_is_separate_from_real_data_and_read_only() -> None:
 
     client.get("/demo/exit")
     assert client.get("/").status_code == 302
+
+
+def test_first_time_visitor_lands_on_english_demo_and_returning_visitor_gets_login() -> None:
+    client = _client(MemoryDietRepository())
+
+    response = client.get("/")
+    assert response.status_code == 302 and response.location.endswith("/demo")
+    client.get("/demo")
+    assert b"Exit demo" in client.get("/?range=90d").data
+
+    # Still a first-timer while only the demo has been seen.
+    client.get("/demo/exit")
+    # Exiting the demo shows the login page, which marks the visitor as known.
+    client.get("/login")
+    response = client.get("/")
+    assert response.status_code == 302 and "/login" in response.location
+
+
+def test_visitor_who_has_seen_login_page_is_not_sent_to_demo() -> None:
+    client = _client(MemoryDietRepository())
+    client.get("/login")
+    response = client.get("/")
+    assert "/login" in response.location

@@ -40,6 +40,8 @@ from mydiet.nutrition import (
 )
 from mydiet.settings import Settings, get_settings
 
+VISITED_COOKIE = "mydiet_visited"
+
 
 ASSET_VERSION = "20261031-1"
 SESSION_LIFETIME = timedelta(days=365)
@@ -393,6 +395,8 @@ def create_app(
         }:
             return None
         if not session.get("authenticated"):
+            if request.method == "GET" and not request.cookies.get(VISITED_COOKIE):
+                return redirect(url_for("demo"))
             return redirect(url_for("login", next=request.full_path))
         if request.endpoint not in {"profile", "save_profile", "logout", "set_language"}:
             profile = repo.get_profile(_current_user_id(settings))
@@ -400,6 +404,20 @@ def create_app(
                 flash(_t("complete_profile_first"), "error")
                 return redirect(url_for("profile"))
         return None
+
+    @app.after_request
+    def remember_visitor(response: Any) -> Any:
+        # First-time visitors land on the demo; anyone who has seen a real page gets the login page from then on.
+        if is_demo() or request.endpoint in {"static", "uploaded_file", "mcp", "weight_api", "demo"}:
+            return response
+        if response.location and urlparse(response.location).path == url_for("demo"):
+            return response
+        if not request.cookies.get(VISITED_COOKIE):
+            response.set_cookie(
+                VISITED_COOKIE, "1", max_age=10 * 365 * 24 * 3600, httponly=True, samesite="Lax",
+                secure=request.is_secure,
+            )
+        return response
 
     @app.post("/language")
     def set_language() -> Any:
@@ -475,7 +493,7 @@ def create_app(
 
     @app.get("/demo")
     def demo() -> Any:
-        lang = session.get("lang") or "tr"
+        lang = session.get("lang") or "en"
         session.clear()
         session.update(demo=True, authenticated=True, user_id=DEMO_USER, lang=lang)
         ensure_demo_data(demo_repo, local_date(settings.timezone))
