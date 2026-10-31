@@ -8,14 +8,17 @@ Type=simple
 User=mydiet
 Group=mydiet
 WorkingDirectory=/opt/mydiet
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=API_PORT=8080
 Environment=MYDIET_DB=/var/lib/mydiet/mydiet.db
 Environment=MYDIET_DEMO_DB=/var/lib/mydiet/demo.db
 EnvironmentFile=/etc/mydiet.env
-ExecStart=/opt/mydiet/.venv/bin/gunicorn --bind 127.0.0.1:8080 --workers 1 --threads 4 --timeout 120 --forwarded-allow-ips 127.0.0.1 --access-logfile - mydiet.wsgi:app
+ExecStart=/usr/local/bin/node server/index.ts
 Restart=always
 RestartSec=5
 
-# The app only writes its database and gunicorn socket (home dir) and uploaded images.
+# The app only writes its databases and uploaded images.
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
