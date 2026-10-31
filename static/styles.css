@@ -56,6 +56,10 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--paper);
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   background: var(--paper);
@@ -132,7 +136,7 @@ h2 {
   gap: 12px;
   grid-template-columns: auto 1fr auto;
   min-height: 60px;
-  padding: 0 28px;
+  padding: env(safe-area-inset-top) 28px 0;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -1326,7 +1330,7 @@ h2 {
   align-items: center;
   display: grid;
   min-height: 100vh;
-  padding: 24px;
+  padding: max(24px, env(safe-area-inset-top)) 24px 24px;
 }
 
 .login-panel {

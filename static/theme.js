@@ -1,6 +1,7 @@
 (function () {
   const root = document.documentElement;
   const metas = document.querySelectorAll('meta[name="theme-color"]');
+  const statusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
   const buttons = document.querySelectorAll("[data-theme-choice]");
 
   function paint() {
@@ -13,6 +14,7 @@
       meta.media = "all";
       meta.content = paper;
     });
+    if (statusBar) statusBar.content = root.dataset.theme === "dark" ? "black-translucent" : "default";
   }
 
   buttons.forEach((button) => {

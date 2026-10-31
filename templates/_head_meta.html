@@ -1,0 +1,28 @@
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=asset_version) }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest', v=asset_version) }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png', v=asset_version) }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MyDiet">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+    <script>
+      (function () {
+        try {
+          var savedTheme = localStorage.getItem("mydiet-theme");
+        } catch (error) {}
+        var theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme
+          : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+        // Paint the phone's top bar to match the chosen theme right away, before iOS reads it.
+        // In dark, the page itself draws under the status bar (the header pads for the notch).
+        var dark = theme === "dark";
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+          meta.media = "all";
+          meta.content = dark ? "#1c1c1e" : "#f5f6f4";
+        });
+        document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content =
+          dark ? "black-translucent" : "default";
+      })();
+    </script>

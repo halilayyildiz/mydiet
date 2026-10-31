@@ -174,10 +174,10 @@ def test_dashboard_calendar_has_month_navigation() -> None:
     assert b"/?range=30d&amp;month=2026-02" in response.data
     assert b'data-calendar-month' in response.data
     assert b">Show</button>" not in response.data
-    assert b"/static/styles.css?v=20261030-2" in response.data
-    assert b"/static/favicon.svg?v=20261030-2" in response.data
-    assert b"/static/charts.js?v=20261030-2" in response.data
-    assert b"/static/dashboard.js?v=20261030-2" in response.data
+    assert b"/static/styles.css?v=20261031-1" in response.data
+    assert b"/static/favicon.svg?v=20261031-1" in response.data
+    assert b"/static/charts.js?v=20261031-1" in response.data
+    assert b"/static/dashboard.js?v=20261031-1" in response.data
 
 
 def test_shift_month_handles_year_edges() -> None:
@@ -433,7 +433,7 @@ def test_entry_form_includes_loading_state() -> None:
     response = app.test_client().get("/entry?date=2026-06-13")
 
     assert response.status_code == 200
-    assert b"/static/forms.js?v=20261030-2" in response.data
+    assert b"/static/forms.js?v=20261031-1" in response.data
     assert b"data-loading-form" in response.data
     assert b"data-loading-status" in response.data
     assert b"data-loading-status hidden" in response.data
@@ -684,7 +684,7 @@ def test_login_form_includes_username_field() -> None:
     assert b'name="username"' in response.data
     assert b'value="halil"' in response.data
     assert b'autocomplete="username"' in response.data
-    assert b"/static/favicon.svg?v=20261030-2" in response.data
+    assert b"/static/favicon.svg?v=20261031-1" in response.data
     assert b'href="/register"' in response.data
 
 
