@@ -3,6 +3,9 @@ import { api } from "./api.ts";
 import { FormStatus, useApp, useData } from "./App.tsx";
 import { useRouter } from "./router.tsx";
 
+// Calorie analysis from text needs an LLM API on the server; off ("coming soon") until there is one.
+const ANALYSIS_ENABLED = false;
+
 export function Entry() {
   const { t, session, errorText, flash, lang } = useApp();
   const { query, navigate } = useRouter();
@@ -24,7 +27,7 @@ export function Entry() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || !ANALYSIS_ENABLED) return;
     setBusy(true);
     try {
       const result = await api.saveEntry(formDate, text);
@@ -63,9 +66,13 @@ export function Entry() {
           </label>
           <label>
             {t.food_and_activity_notes}
-            <textarea name="diary_text" rows={18} placeholder={t.diary_placeholder} value={text} onChange={(e) => setText(e.target.value)} />
+            <textarea name="diary_text" rows={18} placeholder={t.diary_placeholder} value={text}
+              onChange={(e) => setText(e.target.value)} disabled={!ANALYSIS_ENABLED} />
           </label>
-          <button type="submit" disabled={busy}>{busy ? t.analyzing : t.analyze_day}</button>
+          {!ANALYSIS_ENABLED && <p className="muted">{t.analysis_coming_soon}</p>}
+          <button type="submit" disabled={busy || !ANALYSIS_ENABLED}>
+            {!ANALYSIS_ENABLED ? t.coming_soon : busy ? t.analyzing : t.analyze_day}
+          </button>
         </form>
 
         <section className="result-panel">
