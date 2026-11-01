@@ -1,9 +1,10 @@
 // A small MCP server (streamable HTTP, JSON responses) so a Claude chat can save the days it already worked out
 // (foods, calories, activity) here.
 //
-// claude.ai connects to https://<host>/mcp/<MCP_TOKEN>; the secret path is the only credential.
-// An iPhone Shortcut posts the scale's Apple Health weight to /api/<MCP_TOKEN>/weight with the same secret.
-import { timingSafeEqual } from "node:crypto";
+// claude.ai connects to https://<host>/mcp/<token>; the secret path is the only credential, and says whose data it is
+// (each user has their own token, see accounts.ts; MCP_TOKEN stays the admin's).
+// An iPhone Shortcut posts the scale's Apple Health weight to /api/<token>/weight with the same secret.
+import { tokenUser } from "./accounts.ts";
 import type { FastifyInstance } from "fastify";
 import type { Config } from "./config.ts";
 import type { Repo } from "./db.ts";
@@ -21,7 +22,7 @@ const DATE = {
 const FOOD_ITEM = {
   type: "object",
   properties: {
-    name: { type: "string", description: 'Short name in Turkish, e.g. "2 haşlanmış yumurta".' },
+    name: { type: "string", description: 'Short name in the language the user writes in, e.g. "2 boiled eggs" or "2 haşlanmış yumurta".' },
     meal: { type: "string", enum: ["morning", "lunch", "dinner", "snacks"] },
     calories: { type: "number" },
     protein_g: { type: "number" },
@@ -59,7 +60,7 @@ export const TOOLS = [
             "Total calories burned that day (BMR + activity). Omit to let MyDiet estimate it " +
             "from the profile plus activity_calories.",
         },
-        summary: { type: "string", description: "One or two sentences on the day, in Turkish." },
+        summary: { type: "string", description: "One or two sentences on the day, in the language the user writes in." },
       },
       required: ["diary_text", "food_items"],
     },
@@ -116,12 +117,6 @@ function repr(value: unknown): string {
   return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
-const tokenMatches = (config: Config, token: string) => {
-  const a = Buffer.from(token);
-  const b = Buffer.from(config.mcpToken);
-  return config.mcpToken !== "" && a.length === b.length && timingSafeEqual(a, b);
-};
-
 /**
  * Shortcuts may send 82.4, "82,4" (Turkish locale), "82.4 kg", "181 lb", or a whole sample as text (dates and
  * all); pick the number that looks like a body weight and convert it to kg.
@@ -147,8 +142,6 @@ export function shortcutWeight(value: unknown): number {
 const rpcError = (id: unknown, code: number, message: string) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
 
 export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
-  const userId = config.singleUserId;
-
   const day = (value: unknown): string => {
     if (!value) return localDate(config.timezone);
     const date = isoDate(value);
@@ -156,14 +149,14 @@ export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
     return date;
   };
 
-  const recordWeight = (date: string, weightKg: number) => {
+  const recordWeight = (userId: string, date: string, weightKg: number) => {
     repo.saveWeight(userId, date, weightKg);
     const profile = { ...repo.getProfile(userId), weight_kg: weightKg };
     repo.saveProfile(userId, { bmr_calories: computeBmrCalories(profile, { useStored: false }) });
   };
 
-  const handlers: Record<string, (args: Record<string, any>) => Record<string, any>> = {
-    save_day(args) {
+  const handlers: Record<string, (userId: string, args: Record<string, any>) => Record<string, any>> = {
+    save_day(userId, args) {
       if (!Array.isArray(args.food_items)) throw new ToolError("food_items must be a list.");
       const date = day(args.date);
       const entry = repo.getEntry(userId, date);
@@ -183,7 +176,7 @@ export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
         calorie_deficit: analysis.calorie_deficit,
       };
     },
-    get_day(args) {
+    get_day(userId, args) {
       const date = day(args.date);
       const entry = repo.getEntry(userId, date);
       const weights = repo.listWeightLogs(userId, date, date);
@@ -191,7 +184,7 @@ export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
       if (!Object.keys(entry).length) return { date, logged: false, ...weight };
       return { date, diary_text: entry.diary_text ?? "", analysis: entry.analysis ?? null, ...weight };
     },
-    list_days(args) {
+    list_days(userId, args) {
       const start = day(args.start_date);
       const end = day(args.end_date);
       return {
@@ -206,16 +199,16 @@ export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
         }),
       };
     },
-    log_weight(args) {
+    log_weight(userId, args) {
       const weightKg = typeof args.weight_kg === "boolean" ? Number(args.weight_kg) : Number(args.weight_kg ?? NaN);
       if (args.weight_kg === null || args.weight_kg === "" || Array.isArray(args.weight_kg) || !Number.isFinite(weightKg)) {
         throw new ToolError("weight_kg must be a number.");
       }
       const date = day(args.date);
-      recordWeight(date, weightKg);
+      recordWeight(userId, date, weightKg);
       return { date, weight_kg: weightKg };
     },
-    list_weights(args) {
+    list_weights(userId, args) {
       const start = day(args.start_date);
       const end = day(args.end_date);
       const weights = repo.listWeightLogs(userId, start, end).map((log) => ({ date: log.date ?? null, weight_kg: log.weight_kg ?? null }));
@@ -225,11 +218,11 @@ export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
     },
   };
 
-  function callTool(params: Record<string, any>) {
+  function callTool(userId: string, params: Record<string, any>) {
     const handler = Object.hasOwn(handlers, params.name ?? "") ? handlers[params.name] : undefined;
     if (!handler) throw new RangeError(`Unknown tool ${repr(params.name)}`);
     try {
-      const result = handler(params.arguments || {});
+      const result = handler(userId, params.arguments || {});
       return { content: [{ type: "text", text: JSON.stringify(result) }] };
     } catch (e) {
       if (e instanceof ToolError) return { content: [{ type: "text", text: e.message }], isError: true };
@@ -237,7 +230,7 @@ export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
     }
   }
 
-  function handle(message: unknown): Record<string, any> | null {
+  function handle(userId: string, message: unknown): Record<string, any> | null {
     if (!message || typeof message !== "object" || Array.isArray(message)) return null;
     const msg = message as Record<string, any>;
     if (!("id" in msg)) return null; // notifications need no answer
@@ -258,7 +251,7 @@ export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
           result = { tools: TOOLS };
           break;
         case "tools/call":
-          result = callTool(msg.params || {});
+          result = callTool(userId, msg.params || {});
           break;
         default:
           return rpcError(msg.id, -32601, `Method not found: ${msg.method}`);
@@ -274,27 +267,29 @@ export function registerMcp(app: FastifyInstance, repo: Repo, config: Config) {
     method: ["GET", "POST", "DELETE"],
     url: "/mcp/:token",
     handler: async (req, reply) => {
-      if (!tokenMatches(config, (req.params as { token: string }).token)) return reply.status(404).send({ error: "Not found" });
+      const userId = tokenUser(repo, config, (req.params as { token: string }).token);
+      if (!userId) return reply.status(404).send({ error: "Not found" });
       if (req.method !== "POST") return reply.status(405).header("Allow", "POST").send();
       const payload = req.body;
       if (Array.isArray(payload)) {
-        const replies = payload.map(handle).filter(Boolean);
+        const replies = payload.map((m) => handle(userId, m)).filter(Boolean);
         return replies.length ? replies : reply.status(202).send();
       }
       if (!payload || typeof payload !== "object") return reply.status(400).send(rpcError(null, -32700, "Parse error"));
-      const answer = handle(payload);
+      const answer = handle(userId, payload);
       return answer ?? reply.status(202).send();
     },
   });
 
   app.post("/api/:token/weight", async (req, reply) => {
-    if (!tokenMatches(config, (req.params as { token: string }).token)) return reply.status(404).send({ error: "Not found" });
+    const userId = tokenUser(repo, config, (req.params as { token: string }).token);
+    if (!userId) return reply.status(404).send({ error: "Not found" });
     const payload = (req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {}) as Record<string, any>;
     try {
       const weightKg = shortcutWeight(payload.weight_kg);
       // Shortcuts' ISO 8601 date is local time with an offset, so its first 10 characters are the day.
       const date = day(String(payload.date || "").slice(0, 10));
-      recordWeight(date, weightKg);
+      recordWeight(userId, date, weightKg);
       return { date, weight_kg: weightKg };
     } catch (e) {
       if (!(e instanceof ToolError)) throw e;

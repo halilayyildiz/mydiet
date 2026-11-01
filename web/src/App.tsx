@@ -7,7 +7,7 @@ import { Dashboard } from "./Dashboard.tsx";
 import { Entry } from "./Entry.tsx";
 import { Weight } from "./Weight.tsx";
 import { ProfilePage } from "./Profile.tsx";
-import { Login, Register } from "./Login.tsx";
+import { Login, Register, ResetPassword } from "./Login.tsx";
 
 /** A message at the top of one page: it shows while that page (href) is open. */
 export type Flash = { kind: "success" | "error"; text: string; href: string } | null;
@@ -50,7 +50,7 @@ export function App() {
 
   // Signed-in users fill in their profile first.
   useEffect(() => {
-    if (session?.authenticated && session.needsProfile && router.path !== "/profile" && !["/login", "/register"].includes(router.path)) {
+    if (session?.authenticated && session.needsProfile && router.path !== "/profile" && !["/login", "/register", "/reset"].includes(router.path)) {
       setFlash({ kind: "error", text: t.complete_profile_first, href: "/profile" });
       router.navigate("/profile", { replace: true });
     }
@@ -70,12 +70,12 @@ export function App() {
     refreshSession,
   };
 
-  const authPage = router.path === "/login" || router.path === "/register";
+  const authPage = ["/login", "/register", "/reset"].includes(router.path);
   return (
     <RouterProvider value={router}>
       <Ctx.Provider value={ctx}>
         {authPage ? (
-          router.path === "/login" ? <Login flash={flash} /> : <Register flash={flash} />
+          router.path === "/login" ? <Login flash={flash} /> : router.path === "/reset" ? <ResetPassword flash={flash} /> : <Register flash={flash} />
         ) : (
           <Shell flash={flash}>
             <Page />

@@ -2,8 +2,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api } from "./api.ts";
 import { FormStatus, useApp, useData } from "./App.tsx";
 import { useRouter } from "./router.tsx";
+import { ConnectPanel } from "./Connect.tsx";
 
-// Calorie analysis from text needs an LLM API on the server; off ("coming soon") until there is one.
+// Calorie analysis from text needs an LLM API on the server; off until there is one. Meanwhile days come in from
+// the user's own AI chat through the MCP connector (see ConnectPanel).
 const ANALYSIS_ENABLED = false;
 
 export function Entry() {
@@ -54,6 +56,8 @@ export function Entry() {
         </div>
       </section>
 
+      {!ANALYSIS_ENABLED && <ConnectPanel />}
+
       <section className="form-layout">
         <form className={`stack-form${busy ? " is-submitting" : ""}`} onSubmit={submit} aria-busy={busy}>
           <FormStatus message={busy ? t.analyzing_day : null} />
@@ -64,15 +68,14 @@ export function Entry() {
               if (e.target.value) navigate(`/entry?date=${e.target.value}`, { replace: true });
             }} required />
           </label>
-          <label>
-            {t.food_and_activity_notes}
-            <textarea name="diary_text" rows={18} placeholder={t.diary_placeholder} value={text}
-              onChange={(e) => setText(e.target.value)} disabled={!ANALYSIS_ENABLED} />
-          </label>
-          {!ANALYSIS_ENABLED && <p className="muted">{t.analysis_coming_soon}</p>}
-          <button type="submit" disabled={busy || !ANALYSIS_ENABLED}>
-            {!ANALYSIS_ENABLED ? t.coming_soon : busy ? t.analyzing : t.analyze_day}
-          </button>
+          {(ANALYSIS_ENABLED || text) && (
+            <label>
+              {t.food_and_activity_notes}
+              <textarea name="diary_text" rows={18} placeholder={t.diary_placeholder} value={text}
+                onChange={(e) => setText(e.target.value)} readOnly={!ANALYSIS_ENABLED} />
+            </label>
+          )}
+          {ANALYSIS_ENABLED && <button type="submit" disabled={busy}>{busy ? t.analyzing : t.analyze_day}</button>}
         </form>
 
         <section className="result-panel">

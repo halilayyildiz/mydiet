@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api } from "./api.ts";
 import { FormStatus, kg, useApp, useData } from "./App.tsx";
 import { useRouter } from "./router.tsx";
+import { ConnectPanel } from "./Connect.tsx";
+import type { AdminUser } from "./api.ts";
 
 const FIELDS = ["name", "age", "gender", "height_cm", "weight_kg", "goal_weight_kg", "activity_level", "goal"] as const;
 type Form = Record<(typeof FIELDS)[number], string>;
@@ -19,7 +21,7 @@ function bmrPreview(form: Form): number {
 }
 
 export function ProfilePage() {
-  const { t, errorText, flash, refreshSession } = useApp();
+  const { t, session, errorText, flash, refreshSession } = useApp();
   const { navigate } = useRouter();
   const [data] = useData(() => api.profile(), "profile");
   const [form, setForm] = useState<Form | null>(null);
@@ -124,6 +126,98 @@ export function ProfilePage() {
         </label>
         <button type="submit" disabled={busy}>{busy ? t.saving : t.save_profile}</button>
       </form>
+
+      {!session.demo && (
+        <>
+          <ConnectPanel showWeight />
+          <PasswordForm />
+          {session.admin && <AdminUsers />}
+        </>
+      )}
     </>
+  );
+}
+
+function PasswordForm() {
+  const { t, errorText, flash } = useApp();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api.changePassword(current, next);
+      setCurrent("");
+      setNext("");
+      flash("success", t.password_changed);
+      window.scrollTo({ top: 0 });
+    } catch (err) {
+      flash("error", errorText(err));
+      window.scrollTo({ top: 0 });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="settings-panel stack-form" onSubmit={submit}>
+      <h2>{t.change_password}</h2>
+      <label>
+        {t.current_password}
+        <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
+      </label>
+      <label>
+        {t.new_password}
+        <input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" minLength={8} required />
+      </label>
+      <button type="submit" disabled={busy}>{t.change_password}</button>
+    </form>
+  );
+}
+
+/** The admin's list of accounts, with a button that makes a password reset link to send. */
+function AdminUsers() {
+  const { t, errorText, flash } = useApp();
+  const [users, setUsers] = useState<AdminUser[] | null>(null);
+
+  useEffect(() => {
+    api.adminUsers().then((r) => setUsers(r.users)).catch((err) => flash("error", errorText(err)));
+  }, []);
+
+  const reset = async (username: string) => {
+    try {
+      const { url } = await api.resetLink(username);
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        window.prompt("", url);
+      }
+      flash("success", t.reset_link_made);
+    } catch (err) {
+      flash("error", errorText(err));
+    }
+    window.scrollTo({ top: 0 });
+  };
+
+  if (!users) return null;
+  return (
+    <section className="settings-panel">
+      <h2>{t.users} ({users.length})</h2>
+      <ul className="user-list">
+        {users.map((u) => (
+          <li key={u.username}>
+            <div>
+              <strong>{u.username}</strong>
+              <span className="muted small">
+                {u.name ? `${u.name} · ` : ""}{u.days} {t.logged_days}{u.last_day ? ` · ${u.last_day}` : ""}
+              </span>
+            </div>
+            <button type="button" className="link-button" onClick={() => reset(u.username)}>{t.reset_link}</button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

@@ -1536,3 +1536,112 @@ h2 {
 .svg-chart .recharts-surface {
   overflow: visible;
 }
+
+/* ---------- Connector guide, password, users ---------- */
+
+.connect-panel,
+.settings-panel {
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 24px;
+}
+
+.connect-panel h2,
+.settings-panel h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.connect-panel p {
+  margin: 0;
+}
+
+.connect-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.small {
+  font-size: 13px;
+}
+
+.copy-field {
+  color: var(--muted);
+  display: grid;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 7px;
+  min-width: 0;
+}
+
+.copy-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.copy-row input {
+  background: var(--sunken);
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+  color: var(--ink);
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  min-height: 44px;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.copy-row button {
+  background: var(--green);
+  border: 0;
+  border-radius: var(--control-radius);
+  color: var(--on-accent);
+  flex: none;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 0 16px;
+}
+
+.link-button {
+  background: none;
+  border: 0;
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 600;
+  justify-self: start;
+  padding: 0;
+}
+
+.settings-panel.stack-form {
+  max-width: 520px;
+}
+
+.user-list {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.user-list li {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.user-list li div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}

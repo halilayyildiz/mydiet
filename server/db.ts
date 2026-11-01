@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS weight_logs (
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at TEXT NOT NULL
 );
+-- Each user's secret for the MCP connector URL and the Shortcut weight URL.
+CREATE TABLE IF NOT EXISTS user_tokens (user_id TEXT PRIMARY KEY, token TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL);
+-- Password reset links made by the admin; only a SHA-256 of each token is stored.
+CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at TEXT NOT NULL);
 `;
 
 const isoNow = () => new Date().toISOString().replace("Z", "+00:00");

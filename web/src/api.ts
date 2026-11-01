@@ -1,6 +1,6 @@
 // Calls to the server's JSON API.
 
-export type Session = { authenticated: boolean; username: string | null; demo: boolean; lang: string; needsProfile: boolean; today: string };
+export type Session = { authenticated: boolean; username: string | null; demo: boolean; admin?: boolean; lang: string; needsProfile: boolean; today: string };
 
 export type TrendRow = { date: string; has_data: boolean; food?: number; basal?: number; burned?: number; activity?: number; deficit?: number };
 export type WeightRow = { date: string; has_data: boolean; weight?: number };
@@ -36,6 +36,8 @@ export type EntryData = {
 };
 export type WeightData = { today: string; currentWeight: number | null; logs: { date: string; weight_kg: number }[] };
 export type Profile = Record<string, any>;
+export type ConnectUrls = { mcpUrl: string; weightUrl: string };
+export type AdminUser = { username: string; name: string; created_at: string | null; days: number; last_day: string | null };
 
 export class ApiError extends Error {
   status: number;
@@ -66,7 +68,13 @@ async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
 export const api = {
   session: () => req<Session>("GET", "/api/session"),
   login: (username: string, password: string) => req<{ ok: true; needsProfile: boolean }>("POST", "/api/login", { username, password }),
-  register: (username: string, password: string) => req<{ ok: true }>("POST", "/api/register", { username, password }),
+  register: (username: string, password: string) => req<{ ok: true; needsProfile: boolean }>("POST", "/api/register", { username, password }),
+  changePassword: (current_password: string, new_password: string) => req("POST", "/api/password", { current_password, new_password }),
+  resetPassword: (token: string, password: string) => req("POST", "/api/reset", { token, password }),
+  connect: () => req<ConnectUrls>("GET", "/api/connect"),
+  rotateConnect: () => req<ConnectUrls>("POST", "/api/connect/rotate"),
+  adminUsers: () => req<{ users: AdminUser[] }>("GET", "/api/admin/users"),
+  resetLink: (username: string) => req<{ url: string }>("POST", "/api/admin/reset-link", { username }),
   logout: () => req("POST", "/api/logout"),
   setLanguage: (lang: string) => req<{ lang: string }>("POST", "/api/language", { lang }),
   dashboard: (range: string, month?: string) =>

@@ -145,16 +145,87 @@ test("sessions slide forward: an old session gets a fresh year", async () => {
   assert.equal((await app.inject({ url: "/api/session", headers: { cookie: header(jar) } })).json().authenticated, false);
 });
 
-test("register creates an account that can sign in; bad input is refused", async () => {
+test("register: open sign-up signs the new user in; bad input and too many sign-ups are refused", async () => {
   const { app } = await setup();
-  const reg = (username: string, password: string) => app.inject({ method: "POST", url: "/api/register", payload: { username, password } });
-  assert.equal((await reg("x", "pw")).json().error, "invalid_username");
-  assert.equal((await reg("newuser", "")).json().error, "invalid_password");
-  assert.equal((await reg("NewUser", "pw123")).statusCode, 200);
-  assert.equal((await reg("newuser", "pw123")).json().error, "user_already_exists");
-  const { res } = await login(app, "newuser", "pw123");
+  const reg = (username: string, password: string, ip = "1.1.1.1") =>
+    app.inject({ method: "POST", url: "/api/register", payload: { username, password }, remoteAddress: ip });
+  assert.equal((await reg("x", "password1")).json().error, "invalid_username");
+  assert.equal((await reg("demo", "password1")).json().error, "invalid_username");
+  assert.equal((await reg("newuser", "short")).json().error, "password_too_short");
+  const ok = await reg("NewUser", "password1");
+  assert.equal(ok.statusCode, 200);
+  const jar = cookies(ok);
+  const session = (await app.inject({ url: "/api/session", headers: { cookie: header(jar) } })).json();
+  assert.deepEqual([session.username, session.needsProfile, session.admin], ["newuser", true, false]);
+  assert.equal((await reg("newuser", "password1", "2.2.2.2")).json().error, "user_already_exists");
+  const { res } = await login(app, "newuser", "password1");
   assert.equal(res.statusCode, 200);
-  assert.equal(res.json().needsProfile, true);
+  await reg("second", "password1");
+  await reg("third", "password1");
+  assert.equal((await reg("fourth", "password1")).json().error, "too_many_signups");
+  assert.equal((await reg("fourth", "password1", "3.3.3.3")).statusCode, 200);
+});
+
+test("each user's connector URL writes only their own data; MCP_TOKEN stays the admin's", async () => {
+  const { app, repo } = await setup({ appPassword: "pw" });
+  repo.saveProfile("halil", COMPLETE_PROFILE);
+  const reg = await app.inject({ method: "POST", url: "/api/register", payload: { username: "ayse", password: "password1" } });
+  const ayse = cookies(reg);
+  const halil = (await login(app, "halil", "pw")).jar;
+  const mine = (await app.inject({ url: "/api/connect", headers: { cookie: header(halil) } })).json();
+  assert.match(mine.mcpUrl, /\/mcp\/secret-token$/);
+  const theirs = (await app.inject({ url: "/api/connect", headers: { cookie: header(ayse) } })).json();
+  const token = theirs.mcpUrl.split("/mcp/")[1];
+  assert.ok(token.length > 20 && token !== "secret-token");
+  assert.equal((await app.inject({ url: "/api/connect", headers: { cookie: header(ayse) } })).json().mcpUrl, theirs.mcpUrl, "stays the same");
+
+  const call = (t: string, name: string, args: any) =>
+    app.inject({ method: "POST", url: `/mcp/${t}`, payload: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } } });
+  await call(token, "log_weight", { date: "2026-10-30", weight_kg: 61 });
+  await call("secret-token", "log_weight", { date: "2026-10-30", weight_kg: 90 });
+  await app.inject({ method: "POST", url: `/api/${token}/weight`, payload: { weight_kg: "60,5", date: "2026-10-31T08:00:00+01:00" } });
+  assert.deepEqual(repo.listWeightLogs("ayse", "2026-10-01", "2026-10-31").map((w) => w.weight_kg), [61, 60.5]);
+  assert.deepEqual(repo.listWeightLogs("halil", "2026-10-01", "2026-10-31").map((w) => w.weight_kg), [90]);
+
+  const rotated = (await app.inject({ method: "POST", url: "/api/connect/rotate", headers: { cookie: header(ayse) } })).json();
+  assert.notEqual(rotated.mcpUrl, theirs.mcpUrl);
+  assert.equal((await call(token, "get_day", {})).statusCode, 404, "the old URL stops working");
+  assert.equal((await call("nope", "get_day", {})).statusCode, 404);
+});
+
+test("password change, admin reset links, and photos only for their owner", async () => {
+  const { app, repo, config } = await setup({ appPassword: "pw" });
+  repo.saveProfile("halil", COMPLETE_PROFILE);
+  const ayse = cookies(await app.inject({ method: "POST", url: "/api/register", payload: { username: "ayse", password: "password1" } }));
+  const pw = (jar: any, current: string, next: string) =>
+    app.inject({ method: "POST", url: "/api/password", payload: { current_password: current, new_password: next }, headers: { cookie: header(jar) } });
+  assert.equal((await pw(ayse, "wrong", "password2")).json().error, "incorrect_current_password");
+  const changed = await pw(ayse, "password1", "password2");
+  assert.equal(changed.statusCode, 200);
+  cookies(changed, ayse);
+  assert.equal((await login(app, "ayse", "password2")).res.statusCode, 200);
+
+  assert.equal((await app.inject({ url: "/api/admin/users", headers: { cookie: header(ayse) } })).statusCode, 403);
+  const halil = (await login(app, "halil", "pw")).jar;
+  assert.equal((await app.inject({ url: "/api/session", headers: { cookie: header(halil) } })).json().admin, true);
+  const users = (await app.inject({ url: "/api/admin/users", headers: { cookie: header(halil) } })).json().users;
+  assert.deepEqual(users.map((u: any) => u.username), ["ayse", "halil"]);
+  const link = (await app.inject({ method: "POST", url: "/api/admin/reset-link", payload: { username: "ayse" }, headers: { cookie: header(halil) } })).json().url;
+  const token = new URL(link).searchParams.get("token");
+  assert.equal((await app.inject({ method: "POST", url: "/api/reset", payload: { token: "bad", password: "password3" } })).json().error, "reset_link_invalid");
+  assert.equal((await app.inject({ method: "POST", url: "/api/reset", payload: { token, password: "password3" } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "POST", url: "/api/reset", payload: { token, password: "password4" } })).statusCode, 400, "used once");
+  assert.equal((await app.inject({ url: "/api/session", headers: { cookie: header(ayse) } })).json().authenticated, false, "signed out everywhere");
+  assert.equal((await login(app, "ayse", "password3")).res.statusCode, 200);
+
+  const { writeFileSync, mkdirSync } = await import("node:fs");
+  mkdirSync(config.uploadDir, { recursive: true });
+  writeFileSync(join(config.uploadDir, "a.jpg"), "jpg");
+  repo.saveEntry("halil", "2026-10-30", { image_urls: ["/uploads/a.jpg"], analysis: {} });
+  assert.equal((await app.inject({ url: "/uploads/a.jpg", headers: { cookie: header(halil) } })).statusCode, 200);
+  const ayse2 = (await login(app, "ayse", "password3")).jar;
+  assert.equal((await app.inject({ url: "/uploads/a.jpg", headers: { cookie: header(ayse2) } })).statusCode, 404);
+  assert.equal((await app.inject({ url: "/uploads/a.jpg" })).statusCode, 404);
 });
 
 test("pages: first visit goes to the demo, later visits to the login page", async () => {
