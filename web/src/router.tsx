@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, type AnchorHTMLAttributes, type MouseEvent } from "react";
 
 type Location = { path: string; query: URLSearchParams; href: string };
-type Router = Location & { navigate: (href: string, opts?: { replace?: boolean }) => void };
+type Router = Location & { navigate: (href: string, opts?: { replace?: boolean; keepScroll?: boolean }) => void };
 
 const read = (): Location => ({ path: location.pathname, query: new URLSearchParams(location.search), href: location.pathname + location.search });
 
@@ -15,11 +15,11 @@ export function useRouterState(): Router {
     addEventListener("popstate", onPop);
     return () => removeEventListener("popstate", onPop);
   }, []);
-  const navigate = (href: string, opts: { replace?: boolean } = {}) => {
+  const navigate = (href: string, opts: { replace?: boolean; keepScroll?: boolean } = {}) => {
     if (opts.replace) history.replaceState(null, "", href);
     else history.pushState(null, "", href);
     setLoc(read());
-    if (!opts.replace) scrollTo(0, 0);
+    if (!opts.replace && !opts.keepScroll) scrollTo(0, 0);
   };
   return { ...loc, navigate };
 }

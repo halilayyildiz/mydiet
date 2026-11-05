@@ -179,7 +179,7 @@ function Calendar({ initial, range }: { initial: CalendarData; range: string }) 
     };
   }, [month]);
 
-  const go = (m: string) => navigate(`/?${new URLSearchParams({ range, month: m })}`, { replace: false });
+  const go = (m: string) => navigate(`/?${new URLSearchParams({ range, month: m })}`, { keepScroll: true });
 
   return (
     <section className={`calendar-section${loading ? " is-loading" : ""}`} aria-busy={loading}>
