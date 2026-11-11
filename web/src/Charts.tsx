@@ -62,7 +62,10 @@ function axisTicks(min: number, max: number, step: number) {
   return ticks;
 }
 
-/** Long ranges label month starts with the month name; shorter ones label every few days by day number. */
+/**
+ * Long ranges label month starts with the month name; shorter ones label every few days by day number,
+ * with the month added on the first label and wherever a new month starts ("14 Aug", 27, 9 → "9 Sep").
+ */
 function xLabelFor(rows: Row[], index: number, every: number, width: number, lang: string) {
   const row = rows[index];
   if (!row) return "";
@@ -72,8 +75,13 @@ function xLabelFor(rows: Row[], index: number, every: number, width: number, lan
     if (width < 560 && Number(row.date.slice(5, 7)) % 2 === 0) return "";
     return new Date(`${row.date}T00:00:00`).toLocaleDateString(lang, { month: "short" });
   }
-  const isLabel = (index % every === 0 && rows.length - 1 - index >= every / 2) || index === rows.length - 1;
-  return isLabel ? String(Number(row.date.slice(8))) : "";
+  const isLabel = (i: number) => (i % every === 0 && rows.length - 1 - i >= every / 2) || i === rows.length - 1;
+  if (!isLabel(index)) return "";
+  let prev = index - 1;
+  while (prev >= 0 && !isLabel(prev)) prev -= 1;
+  const day = String(Number(row.date.slice(8)));
+  if (prev >= 0 && rows[prev].date.slice(0, 7) === row.date.slice(0, 7)) return day;
+  return new Date(`${row.date}T00:00:00`).toLocaleDateString(lang, { day: "numeric", month: "short" });
 }
 
 // Today usually has no entry yet; don't leave an empty slot at the end of every chart.

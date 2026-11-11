@@ -8,8 +8,6 @@ export type Config = {
   appPassword: string;
   /** Hash of the single user's password: werkzeug ("scrypt:…$salt$hex", "pbkdf2:…") or Wealth Tracker ("scrypt$N$r$p$salt$hash"). */
   appPasswordHash: string;
-  /** The Flask app's secret: only used to accept its old login cookies once, so nobody is signed out by the move. */
-  flaskSecretKey: string;
   anthropicApiKey: string;
   singleUserId: string;
   mcpToken: string;
@@ -40,7 +38,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, overrides: Part
     appEnv,
     appPassword: env.APP_PASSWORD ?? "",
     appPasswordHash: env.APP_PASSWORD_HASH ?? "",
-    flaskSecretKey: env.FLASK_SECRET_KEY ?? "",
     anthropicApiKey: env.ANTHROPIC_API_KEY ?? "",
     singleUserId: env.SINGLE_USER_ID || "halil",
     mcpToken: env.MCP_TOKEN ?? "",

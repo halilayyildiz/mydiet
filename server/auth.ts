@@ -1,6 +1,5 @@
 // Passwords, login sessions and cookies.
-import { createHash, createHmac, pbkdf2, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { inflateSync } from "node:zlib";
+import { createHash, pbkdf2, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Config } from "./config.ts";
 import type { Repo } from "./db.ts";
@@ -86,7 +85,6 @@ export const SESSION_COOKIE = "mydiet_session";
 export const LANG_COOKIE = "mydiet_lang";
 export const DEMO_COOKIE = "mydiet_demo";
 export const VISITED_COOKIE = "mydiet_visited";
-const FLASK_COOKIE = "session";
 const YEAR_SECONDS = 365 * 86400;
 const DAY_MS = 86400_000;
 
@@ -150,37 +148,3 @@ export function sessionUser(repo: Repo, req: FastifyRequest, reply: FastifyReply
 export function deleteExpiredSessions(repo: Repo) {
   repo.db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date().toISOString());
 }
-
-// ---------- The Flask version's cookie ----------
-
-const b64url = (s: string) => Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64");
-
-/**
- * Reads a login cookie signed by the old Flask app (itsdangerous: HMAC-SHA1, salt "cookie-session"), so devices
- * that were signed in stay signed in after the move. Returns the session's contents, or null if it isn't valid.
- */
-export function readFlaskSession(cookie: string | undefined, secretKey: string, maxAgeSec = YEAR_SECONDS): Record<string, any> | null {
-  if (!cookie || !secretKey) return null;
-  const at = cookie.lastIndexOf(".");
-  if (at < 0) return null;
-  const value = cookie.slice(0, at);
-  const signature = b64url(cookie.slice(at + 1));
-  const derived = createHmac("sha1", secretKey).update("cookie-session").digest();
-  const expected = createHmac("sha1", derived).update(value).digest();
-  if (!sameBytes(signature, expected)) return null;
-  const tsAt = value.lastIndexOf(".");
-  const timestamp = b64url(value.slice(tsAt + 1)).readUIntBE(0, Math.min(6, b64url(value.slice(tsAt + 1)).length));
-  if (Date.now() / 1000 - timestamp > maxAgeSec) return null;
-  let payload = value.slice(0, tsAt);
-  const compressed = payload.startsWith(".");
-  if (compressed) payload = payload.slice(1);
-  try {
-    const raw = b64url(payload);
-    const data = JSON.parse((compressed ? inflateSync(raw) : raw).toString("utf8"));
-    return data && typeof data === "object" ? data : null;
-  } catch {
-    return null;
-  }
-}
-
-export const FLASK_SESSION_COOKIE = FLASK_COOKIE;

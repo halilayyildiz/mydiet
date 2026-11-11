@@ -32,7 +32,6 @@ Production: `npm run build` (writes `dist/`), then `npm start`, which serves the
 ```bash
 APP_ENV=staging
 APP_PASSWORD_HASH=generate-a-password-hash
-FLASK_SECRET_KEY=the-old-flask-secret
 ANTHROPIC_API_KEY=your-anthropic-key
 SINGLE_USER_ID=halil
 MCP_TOKEN=a-long-random-string
@@ -44,8 +43,6 @@ Generate `APP_PASSWORD_HASH` with `npm run hash-password`. Older Werkzeug hashes
 still work, and `APP_PASSWORD` is still supported for quick local testing.
 
 Logins last a year and slide forward while you use the app (`sessions` table in the database).
-`FLASK_SECRET_KEY` is only needed so logins from the old Flask version keep working: such a cookie is
-checked once and swapped for a new session.
 
 ## Claude connector
 
