@@ -68,7 +68,7 @@ export async function buildApp({ config, analyzer, logger = false, distDir = "di
     const cookieLang = readCookie(req, LANG_COOKIE);
     if (readCookie(req, DEMO_COOKIE) === "1") {
       ensureDemoData(demoRepo, today());
-      return { userId: DEMO_USER, demo: true, lang: LANGS.includes(cookieLang!) ? cookieLang! : "en", repo: demoRepo };
+      return { userId: DEMO_USER, demo: true, lang: LANGS.includes(cookieLang!) ? cookieLang! : browserLang(req), repo: demoRepo };
     }
     let userId = sessionUser(real, req, reply);
     let lang = LANGS.includes(cookieLang!) ? cookieLang! : null;
@@ -91,7 +91,13 @@ export async function buildApp({ config, analyzer, logger = false, distDir = "di
       const preferred = real.getProfile(userId).preferred_language;
       if (LANGS.includes(preferred)) lang = preferred;
     }
-    return { userId, demo: false, lang: lang ?? "en", repo: real };
+    return { userId, demo: false, lang: lang ?? browserLang(req), repo: real };
+  }
+
+  /** With no saved choice: Turkish for a Turkish browser, English otherwise. */
+  function browserLang(req: FastifyRequest): string {
+    const first = String(req.headers["accept-language"] ?? "").split(",")[0].trim().toLowerCase();
+    return first.startsWith("tr") ? "tr" : "en";
   }
 
   /** The signed-in user (or demo visitor); 401 otherwise. */
