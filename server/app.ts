@@ -15,9 +15,9 @@ import {
 } from "./accounts.ts";
 import { averages, balanceSummary, calendar, profileWithBmr, totals, trendSeries, weightSeries } from "./dashboard.ts";
 import {
-  DEMO_COOKIE, FLASK_SESSION_COOKIE, LANG_COOKIE, VISITED_COOKIE, clearCookie, createSession, deleteExpiredSessions,
+  DEMO_COOKIE, LANG_COOKIE, VISITED_COOKIE, clearCookie, createSession, deleteExpiredSessions,
   deleteSession, hashPassword, normalizeUserId, passwordMatches, profileComplete, profileRequired, readCookie,
-  readFlaskSession, sessionUser, setCookie, validUserId,
+  sessionUser, setCookie, validUserId,
 } from "./auth.ts";
 
 const LANGS = ["en", "tr"];
@@ -70,23 +70,8 @@ export async function buildApp({ config, analyzer, logger = false, distDir = "di
       ensureDemoData(demoRepo, today());
       return { userId: DEMO_USER, demo: true, lang: LANGS.includes(cookieLang!) ? cookieLang! : browserLang(req), repo: demoRepo };
     }
-    let userId = sessionUser(real, req, reply);
+    const userId = sessionUser(real, req, reply);
     let lang = LANGS.includes(cookieLang!) ? cookieLang! : null;
-    if (!userId) {
-      // Signed in with the Flask version: carry the login over to a new session, once.
-      const old = readFlaskSession(readCookie(req, FLASK_SESSION_COOKIE), config.flaskSecretKey);
-      if (old) {
-        clearCookie(req, reply, FLASK_SESSION_COOKIE);
-        if (old.authenticated && !old.demo && typeof old.user_id === "string") {
-          userId = old.user_id;
-          createSession(real, req, reply, userId);
-        }
-        if (!lang && LANGS.includes(old.lang)) {
-          lang = old.lang;
-          setCookie(req, reply, LANG_COOKIE, old.lang, YEAR);
-        }
-      }
-    }
     if (!lang && userId) {
       const preferred = real.getProfile(userId).preferred_language;
       if (LANGS.includes(preferred)) lang = preferred;
@@ -459,7 +444,9 @@ export async function buildApp({ config, analyzer, logger = false, distDir = "di
   for (const path of PAGES) app.get(path, page);
 
   // Built assets are named by their content, so browsers may keep them; everything else is checked each time.
+  // No framing by other sites (clickjacking); the other apps get this from their Caddyfile.
   app.addHook("onSend", async (req, reply, payload) => {
+    reply.header("X-Frame-Options", "DENY");
     if (req.url.startsWith("/assets/")) reply.header("Cache-Control", "public, max-age=31536000, immutable");
     return payload;
   });

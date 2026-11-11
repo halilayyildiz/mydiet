@@ -5,22 +5,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildApp } from "../server/app.ts";
 import { loadConfig, type Config } from "../server/config.ts";
-import { hashPassword, readFlaskSession, verifyPassword } from "../server/auth.ts";
+import { hashPassword, verifyPassword } from "../server/auth.ts";
 import { Repo } from "../server/db.ts";
 import { localDate } from "../server/dates.ts";
 import { analysisPrompt } from "../server/claude.ts";
 import { shortcutWeight } from "../server/mcp.ts";
 import { computeBmrCalories, roundHalfEven } from "../server/nutrition.ts";
 
-// Made by werkzeug / Flask (the old app) for "pässword1" and the secret "flasksecret".
+// Made by werkzeug (the old Flask app) for "pässword1".
 const WERKZEUG = {
   scrypt: "scrypt:32768:8:1$RXcpXy57WjHorhlB$f29b5b7e9a995cbd075a3ddb5813a5638e267cfa843715522d0158aac38a66a053309314f98d5756b8b701358603222573e5aa89de53a2fc38ee4a4b9c519b5e",
   pbkdf2: "pbkdf2:sha256:1000$7N1SNrx1fSEfjPkp$859c3ccac42a19507ea4db1fa530c19e9e04aca8151e0fbd1014afd1a29ed692",
-};
-const FLASK_COOKIES = {
-  plain: "eyJhdXRoZW50aWNhdGVkIjp0cnVlLCJ1c2VyX2lkIjoiaGFsaWwiLCJsYW5nIjoidHIiLCJfcGVybWFuZW50Ijp0cnVlfQ.auXvBQ.8aL4g9UEEr_Z_jJ4nJ3Ft8fOSsM",
-  compressed: ".eJyrVkosLclIzSvJTE4sSU1RsiopKk3VUSotTi2KzwRylTISczJzlHSUchLz0oHc1DwguyARJFMxCgYVUKoFAEUKz4M.auXvBQ.zdJNwMlOrrbVAW8PLJqKVteAzJ0",
-  demo: "eyJhdXRoZW50aWNhdGVkIjp0cnVlLCJ1c2VyX2lkIjoiZGVtbyIsImRlbW8iOnRydWV9.auXvBQ.51t-TX3_DbojL2OzWEKCj8QDYBw",
 };
 
 function testConfig(overrides: Partial<Config> = {}): Config {
@@ -30,7 +25,6 @@ function testConfig(overrides: Partial<Config> = {}): Config {
     demoDbPath: join(dir, "demo.db"),
     uploadDir: join(dir, "uploads"),
     mcpToken: "secret-token",
-    flaskSecretKey: "flasksecret",
     ...overrides,
   });
 }
@@ -71,33 +65,6 @@ test("passwords: werkzeug, Wealth Tracker and new hashes", async () => {
   assert.equal(await verifyPassword("hunter22", ours), true);
   assert.equal(await verifyPassword("hunter23", ours), false);
   assert.equal(await verifyPassword("x", "garbage"), false);
-});
-
-test("Flask cookies: valid ones are read, tampered ones are not", () => {
-  assert.deepEqual(readFlaskSession(FLASK_COOKIES.plain, "flasksecret")?.user_id, "halil");
-  assert.equal(readFlaskSession(FLASK_COOKIES.compressed, "flasksecret")?.pad, "x".repeat(400));
-  assert.equal(readFlaskSession(FLASK_COOKIES.plain, "other-secret"), null);
-  assert.equal(readFlaskSession(FLASK_COOKIES.plain.replace("eyJ", "eyK"), "flasksecret"), null);
-  assert.equal(readFlaskSession(FLASK_COOKIES.plain, "flasksecret", 0), null, "too old");
-});
-
-test("a Flask login cookie becomes a new session", async () => {
-  const { app, repo } = await setup();
-  const res = await app.inject({ url: "/api/session", headers: { cookie: `session=${FLASK_COOKIES.plain}` } });
-  assert.equal(res.json().authenticated, true);
-  assert.equal(res.json().username, "halil");
-  assert.equal(res.json().lang, "tr");
-  const jar = cookies(res);
-  assert.ok(jar.mydiet_session);
-  assert.equal(jar.mydiet_lang, "tr");
-  assert.equal(jar.session, undefined, "old cookie cleared");
-  // The new session works on its own.
-  const again = await app.inject({ url: "/api/session", headers: { cookie: header(jar) } });
-  assert.equal(again.json().username, "halil");
-  assert.equal((repo.db.prepare("SELECT count(*) n FROM sessions").get() as { n: number }).n, 1);
-  // A demo visitor's Flask cookie doesn't sign anyone in.
-  const demo = await app.inject({ url: "/api/session", headers: { cookie: `session=${FLASK_COOKIES.demo}` } });
-  assert.equal(demo.json().authenticated, false);
 });
 
 test("login with APP_PASSWORD_HASH, per-account hashes, wrong passwords and lockout", async () => {
@@ -262,6 +229,7 @@ test("demo: English by default, made-up data, read-only, and the real data stays
   assert.equal(jar.mydiet_demo, "1");
   const session = (await app.inject({ url: "/api/session", headers: { cookie: header(jar) } })).json();
   assert.deepEqual([session.authenticated, session.demo, session.lang, session.username], [true, true, "en", "demo"]);
+  assert.equal((await app.inject({ url: "/api/session" })).headers["x-frame-options"], "DENY");
   const dash = (await app.inject({ url: "/api/dashboard?range=90d", headers: { cookie: header(jar) } })).json();
   assert.equal(dash.recordedDays, 90);
   assert.equal(dash.trends.at(-1).date, localDate(config.timezone));
