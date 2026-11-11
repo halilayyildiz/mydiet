@@ -20,8 +20,17 @@ if [ ! -f /var/lib/mydiet/mydiet.db.pre-node ] && [ -f /var/lib/mydiet/mydiet.db
     [ -f "/var/lib/mydiet/$f" ] && sudo -u mydiet cp -p "/var/lib/mydiet/$f" "/var/lib/mydiet/${f/mydiet.db/mydiet.db.pre-node}"
   done
 fi
-sudo install -m 644 deploy/mydiet.service /etc/systemd/system/
+sudo install -m 644 deploy/mydiet.service deploy/mydiet-backup.service deploy/mydiet-backup.timer /etc/systemd/system/
 sudo systemctl daemon-reload
+# Nightly backup (deploy/backup.sh). The Google Drive copy uses the rclone remote set up once for Wealth Tracker
+# (its README → Off-server backups): copied here the first time it exists, so there is nothing to set up per app.
+command -v rclone >/dev/null || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone >/dev/null
+RCLONE_SRC=/var/lib/wealth-tracker/.config/rclone/rclone.conf
+if ! sudo test -f /var/lib/mydiet/.config/rclone/rclone.conf && sudo test -f "$RCLONE_SRC"; then
+  sudo install -d -o mydiet -g mydiet -m 700 /var/lib/mydiet/.config /var/lib/mydiet/.config/rclone
+  sudo install -o mydiet -g mydiet -m 600 "$RCLONE_SRC" /var/lib/mydiet/.config/rclone/rclone.conf
+fi
+sudo systemctl enable --now mydiet-backup.timer >/dev/null
 sudo systemctl restart mydiet
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   curl -fsS -o /dev/null http://127.0.0.1:8080/api/health && break

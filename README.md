@@ -121,3 +121,15 @@ Repository secrets (GitHub → Settings → Secrets and variables → Actions): 
 
 Point the `mydiet` DNS A record at the server; Caddy gets the certificate on the first request.
 
+## Backups
+
+`deploy/backup.sh` runs every night at 03:40 (`deploy/mydiet-backup.timer`, installed by `update.sh`). It packs the database (`VACUUM INTO`, so the app keeps running) and `uploads/`
+into `/var/lib/mydiet/backups/<app>-YYYY-MM-DD.tar.gz`, keeps the newest 30 there, and copies the newest to Google Drive
+with rclone (`gdrive:mydiet-backups`, keeping 90 days). The Drive remote is the one set up once for Wealth
+Tracker; `update.sh` copies its rclone config the first time it finds it. Until then the Drive copy is skipped.
+
+```bash
+sudo systemctl start mydiet-backup && journalctl -u mydiet-backup -n 5   # run one now
+```
+
+To restore: stop the service, unpack the archive and put its files back in `/var/lib/mydiet` (and `uploads/` in `/opt/mydiet`), then start it.

@@ -1,0 +1,16 @@
+[Unit]
+Description=MyDiet nightly backup (deploy/backup.sh)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=mydiet
+Group=mydiet
+WorkingDirectory=/opt/mydiet
+ExecStart=/opt/mydiet/deploy/backup.sh
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/mydiet
