@@ -243,6 +243,16 @@ test("pages: first visit goes to the demo, later visits to the login page", asyn
   assert.equal((await app.inject({ url: "/api/weight" })).statusCode, 401);
 });
 
+test("language follows the browser until one is chosen", async () => {
+  const { app } = await setup({ appPassword: "pw" });
+  const jar = cookies(await app.inject({ url: "/demo" }));
+  const ask = (lang: string, extra: Record<string, string> = {}) =>
+    app.inject({ url: "/api/session", headers: { cookie: header({ ...jar, ...extra }), "accept-language": lang } });
+  assert.equal((await ask("tr-TR,tr;q=0.9,en;q=0.8")).json().lang, "tr");
+  assert.equal((await ask("nl-NL,en;q=0.8")).json().lang, "en");
+  assert.equal((await ask("tr-TR", { mydiet_lang: "en" })).json().lang, "en", "a saved choice wins");
+});
+
 test("demo: English by default, made-up data, read-only, and the real data stays untouched", async () => {
   const { app, repo, config } = await setup({ appPassword: "pw" });
   const enter = await app.inject({ url: "/demo" });
