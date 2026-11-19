@@ -13,5 +13,5 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>,
 );
 
-// Shared footer: version, last update, changes, home link and contact (footer.js).
+// Shared footer: home link, contact, version and last update (footer.js).
 mountFooter(__BUILD_INFO__);

@@ -9,7 +9,7 @@ const api = `http://localhost:${apiPort}`;
 const MAJOR = "1";
 
 export default defineConfig({
-  define: { __BUILD_INFO__: JSON.stringify(buildInfo({ major: MAJOR, repo: "halilayyildiz/mydiet" })) },
+  define: { __BUILD_INFO__: JSON.stringify(buildInfo({ major: MAJOR })) },
   root: "web",
   plugins: [react()],
   build: { outDir: "../dist", emptyOutDir: true },
